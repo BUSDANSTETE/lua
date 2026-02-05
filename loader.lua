@@ -1,11 +1,7 @@
--- ============================================
--- CONFIGURATION
--- ============================================
+
 local LibraryURL = "https://raw.githubusercontent.com/matheoonmicrosoft/lua/main/library.lua"
 
--- ============================================
--- CHARGEMENT DE LA LIBRARY
--- ============================================
+
 local status, LibraryCode = Susano.HttpGet(LibraryURL)
 
 if status ~= 200 then
@@ -12928,6 +12924,7 @@ CreateThread(function()
         Wait(sleep)
     end
 end)
+
 
 
 
