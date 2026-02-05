@@ -1,5 +1,5 @@
 
-local LibraryURL = "https://raw.githubusercontent.com/matheoonmicrosoft/lua/main/library.lua"
+local LibraryURL = "https://raw.githubusercontent.com/BUSDANSTETE/lua/main/library.lua"
 
 
 local status, LibraryCode = Susano.HttpGet(LibraryURL)
@@ -12924,6 +12924,7 @@ CreateThread(function()
         Wait(sleep)
     end
 end)
+
 
 
 
