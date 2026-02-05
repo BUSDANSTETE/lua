@@ -44,10 +44,14 @@ local Menu = chunk()
 Menu.DrawWatermark = function() end
 Menu.UpdatePlayerCount = function() end
 
+-- ============================================
+-- DÉBUT DU CODE ORIGINAL (ligne 39 de l'ancien fichier)
+-- ============================================
 Menu.shooteyesEnabled = false
 Menu.magicbulletEnabled = false
 Menu.silentAimEnabled = false
 Menu.superPunchEnabled = false
+-- ... tout le reste identique
 Menu.rapidFireEnabled = false
 Menu.infiniteAmmoEnabled = false
 Menu.noSpreadEnabled = false
@@ -12924,6 +12928,7 @@ CreateThread(function()
         Wait(sleep)
     end
 end)
+
 
 
 
