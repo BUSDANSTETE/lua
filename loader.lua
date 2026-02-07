@@ -779,7 +779,7 @@ Menu.Categories = {
             { name = "Editor Mode", type = "toggle", value = false },
             { name = "Menu Size", type = "slider", value = 100.0, min = 50.0, max = 200.0, step = 1.0 },
             { name = "", isSeparator = true, separatorText = "Design" },
-            { name = "Menu Theme", type = "selector", options = {"Purple", "pink", "Red"}, selected = 3 },
+            { name = "Menu Theme", type = "selector", options = {"Purple", "pink", "Red", "Green"}, selected = 4 },
             { name = "Flocon", type = "toggle", value = false },
             { name = "Gradient", type = "selector", options = {"1", "2"}, selected = 1 },
             { name = "Scroll Bar Position", type = "selector", options = {"Left", "Right"}, selected = 1 },
@@ -798,7 +798,7 @@ Menu.Categories = {
 
 -- Appliquer le thème rouge par défaut au démarrage
 if Menu.ApplyTheme then
-    Menu.ApplyTheme("Red")
+    Menu.ApplyTheme("Green")
 end
 
 Menu.Visible = false
