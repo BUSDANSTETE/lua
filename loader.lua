@@ -38,6 +38,7 @@ local Menu = chunk()
 
 Menu.DrawWatermark = function() end
 Menu.UpdatePlayerCount = function() end
+Menu.ShowSnowflakes = true -- sync avec Flocon value = true
 
 -- ============================================
 -- DÃ‰BUT DU CODE ORIGINAL (ligne 39 de l'ancien fichier)
@@ -765,34 +766,9 @@ Menu.Categories = {
                 "Legion Square"
             }, selected = 1 },
         }},
-        { name = "Injection", items = {
-            { name = "", isSeparator = true, separatorText = "Resource Injection" },
-            { name = "Inject Script", type = "action" },
-            { name = "Inject All Resources", type = "action" },
-            { name = "Dump Resource List", type = "action" },
-        }},
-        { name = "Triggers", items = {
-            { name = "", isSeparator = true, separatorText = "Server Events" },
-            { name = "Event Name", type = "selector", options = {"Custom"}, selected = 1 },
-            { name = "Fire Event (Server)", type = "action" },
-            { name = "Fire Event (Client)", type = "action" },
-            { name = "", isSeparator = true, separatorText = "Spam" },
-            { name = "Event Spam", type = "toggle", value = false },
-        }},
-        { name = "Memory", items = {
-            { name = "", isSeparator = true, separatorText = "Entity" },
-            { name = "Force Control All", type = "action" },
-            { name = "Delete All Entities", type = "action" },
-            { name = "", isSeparator = true, separatorText = "Network" },
-            { name = "Desync", type = "toggle", value = false },
-            { name = "Fake Timeout", type = "toggle", value = false },
-        }},
         { name = "Bypass", items = {
             { name = "", isSeparator = true, separatorText = "Anti-Cheat" },
             { name = "Bypass Putin", type = "action" },
-            { name = "Spoof Identity", type = "toggle", value = false },
-            { name = "Block Screenshots", type = "toggle", value = false },
-            { name = "Hide From Player List", type = "toggle", value = false },
         }}
     }},
     { name = "Settings", icon = "âš™", hasTabs = true, tabs = {
