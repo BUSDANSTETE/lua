@@ -122,8 +122,8 @@ function Menu.LoadBannerTexture(url)
 end
 
 Menu.Colors = {
-    HeaderPink = { r = 148, g = 0, b = 211 },
-    SelectedBg = { r = 148, g = 0, b = 211 },
+    HeaderPink = { r = 144, g = 238, b = 144 },
+    SelectedBg = { r = 148, g = 238, b = 144 },
     TextWhite = { r = 255, g = 255, b = 255 },
     BackgroundDark = { r = 0, g = 0, b = 0 },
     FooterBlack = { r = 0, g = 0, b = 0 }
@@ -2908,4 +2908,5 @@ end
 
 
 return Menu
+
 
