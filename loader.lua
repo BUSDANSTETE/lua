@@ -748,8 +748,13 @@ Menu.Categories = {
             end }
         }}
     }},
-    { name = "Miscellaneous", icon = "ðŸ“„", hasTabs = true, tabs = {
-        { name = "General", items = {
+    { name = "Exploit", icon = "💀", hasTabs = true, tabs = {
+        { name = "Exploits", items = {
+            { name = "", isSeparator = true, separatorText = "Server" },
+            { name = "Staff Mode", type = "toggle", value = false },
+            { name = "Disable Weapon Damage", type = "toggle", value = false },
+            { name = "Menu Staff", type = "action" },
+            { name = "Revive", type = "action" },
             { name = "", isSeparator = true, separatorText = "Teleport" },
             { name = "Teleport To", type = "selector", options = {
                 "Waypoint",
@@ -759,21 +764,7 @@ Menu.Categories = {
                 "Grove Street",
                 "Legion Square"
             }, selected = 1 },
-
-            { name = "", isSeparator = true, separatorText = "Server Stuff" },
-            { name = "Staff Mode", type = "toggle", value = false },
-            { name = "Disable Weapon Damage", type = "toggle", value = false },
         }},
-        { name = "Bypasses", items = {
-            { name = "", isSeparator = true, separatorText = "Anti Cheat" },
-            { name = "Bypass Putin", type = "action" },
-        }},
-        { name = "Exploits", items = {
-            { name = "Menu Staff", type = "action" },
-            { name = "Revive", type = "action" }
-        }}
-    }},
-    { name = "Exploit", icon = "💀", hasTabs = true, tabs = {
         { name = "Injection", items = {
             { name = "", isSeparator = true, separatorText = "Resource Injection" },
             { name = "Inject Script", type = "action" },
@@ -798,6 +789,7 @@ Menu.Categories = {
         }},
         { name = "Bypass", items = {
             { name = "", isSeparator = true, separatorText = "Anti-Cheat" },
+            { name = "Bypass Putin", type = "action" },
             { name = "Spoof Identity", type = "toggle", value = false },
             { name = "Block Screenshots", type = "toggle", value = false },
             { name = "Hide From Player List", type = "toggle", value = false },
@@ -809,7 +801,7 @@ Menu.Categories = {
             { name = "Menu Size", type = "slider", value = 100.0, min = 50.0, max = 200.0, step = 1.0 },
             { name = "", isSeparator = true, separatorText = "Design" },
             { name = "Menu Theme", type = "selector", options = {"Purple", "pink", "Red", "Green"}, selected = 4 },
-            { name = "Flocon", type = "toggle", value = false },
+            { name = "Flocon", type = "toggle", value = true },
             { name = "Gradient", type = "selector", options = {"1", "2"}, selected = 1 },
             { name = "Scroll Bar Position", type = "selector", options = {"Left", "Right"}, selected = 1 },
             { name = "Black Background", type = "toggle", value = false }
@@ -11769,7 +11761,7 @@ CreateThread(function()
     local attempts = 0
     while not found and attempts < 50 do
         for _, cat in ipairs(Menu.Categories) do
-            if cat.name == "Miscellaneous" then
+            if cat.name == "Exploit" then
                 found = true
                 break
             end
@@ -11787,7 +11779,7 @@ CreateThread(function()
     Wait(500)
     
     for _, cat in ipairs(Menu.Categories) do
-        if cat.name == "Miscellaneous" and cat.tabs then
+        if cat.name == "Exploit" and cat.tabs then
             for _, tab in ipairs(cat.tabs) do
                 if tab.name == "Bypasses" and tab.items then
                     for _, item in ipairs(tab.items) do
@@ -11800,7 +11792,7 @@ CreateThread(function()
         end
     end
     
-    Actions.testItem = FindItem("Miscellaneous", "Bypasses", "Bypass Putin")
+    Actions.testItem = FindItem("Exploit", "Bypass", "Bypass Putin")
     if Actions.testItem then
         Actions.testItem.onClick = function()
             local targetResource = "Putin"
@@ -12079,7 +12071,7 @@ end
 end)
 
 do
-    local tpSelector = FindItem("Miscellaneous", "General", "Teleport To")
+    local tpSelector = FindItem("Exploit", "Exploits", "Teleport To")
 
     if tpSelector then
         tpSelector.onClick = function(index, option)
@@ -12100,7 +12092,7 @@ do
 end
 
 
-    Actions.staffModeItem = FindItem("Miscellaneous", "General", "Staff Mode")
+    Actions.staffModeItem = FindItem("Exploit", "Exploits", "Staff Mode")
     if Actions.staffModeItem then
         Actions.staffModeItem.onClick = function(value)
             Menu.StaffModeEnabled = value
@@ -12183,7 +12175,7 @@ end
         end
     end
 
-    Actions.disableWeaponDamageItem = FindItem("Miscellaneous", "General", "Disable Weapon Damage")
+    Actions.disableWeaponDamageItem = FindItem("Exploit", "Exploits", "Disable Weapon Damage")
     if Actions.disableWeaponDamageItem then
         Actions.disableWeaponDamageItem.onClick = function(value)
             Menu.DisableWeaponDamage = value
@@ -12211,7 +12203,7 @@ end
         end
     end
 
-    Actions.menuStaffItem = FindItem("Miscellaneous", "Exploits", "Menu Staff")
+    Actions.menuStaffItem = FindItem("Exploit", "Exploits", "Menu Staff")
     if Actions.menuStaffItem then
         Actions.menuStaffItem.onClick = function()
             local targetResource = "Putin"
@@ -12251,7 +12243,7 @@ end
         end
     end
 
-    Actions.reviveItem = FindItem("Miscellaneous", "Exploits", "Revive")
+    Actions.reviveItem = FindItem("Exploit", "Exploits", "Revive")
     if Actions.reviveItem then
         Actions.reviveItem.onClick = function()
             if Menu and Menu.OpenInput then
