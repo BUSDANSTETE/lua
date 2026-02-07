@@ -28,6 +28,13 @@ if string.find(LibraryCode, "Susano%.ResetFrame") then
     LibraryCode = string.gsub(LibraryCode, "if Susano%.ResetFrame then", "if Susano.ResetFrame and not Menu.PreventResetFrame then")
 end
 
+-- Patch tag display [RISK] / [DYNASTY] (item name rendering)
+LibraryCode = string.gsub(
+    LibraryCode,
+    'Menu%.DrawText%(textX, textY, item%.name, 17, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
+    'local _dn = item.name; if item.risk then _dn = _dn .. "  [RISK]" end; if item.dynasty then _dn = _dn .. "  [DYNASTY]" end; Menu.DrawText(textX, textY, _dn, 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)'
+)
+
 local chunk, err = load(LibraryCode)
 if not chunk then
     print("[Menu] Erreur compilation: " .. tostring(err))
@@ -380,29 +387,29 @@ Menu.Categories = {
     { name = "Main Menu", icon = "P" },
     { name = "Player", icon = "ðŸ‘¤", hasTabs = true, tabs = {
         { name = "Self", items = {
-            { name = "Godmode", type = "toggle", value = false },
-            { name = "Semi Godmode", type = "toggle", value = false },
-            { name = "Anti Headshot", type = "toggle", value = false },
+            { name = "Godmode", type = "toggle", value = false, risk = true},
+            { name = "Semi Godmode", type = "toggle", value = false, risk = true},
+            { name = "Anti Headshot", type = "toggle", value = false, risk = true},
             { name = "", isSeparator = true, separatorText = "Health" },
             { name = "Revive", type = "action" },
-            { name = "Max Health", type = "action" },
-            { name = "Max Armor", type = "action" },
+            { name = "Max Health", type = "action", risk = true},
+            { name = "Max Armor", type = "action", risk = true},
             { name = "", isSeparator = true, separatorText = "other" },
             { name = "TP all vehicle to me", type = "action" },
             { name = "Detach All Entitys", type = "action" },
             { name = "Solo Session", type = "toggle", value = false },
             { name = "Throw Vehicle", type = "toggle", value = false },
             { name = "Tiny Player", type = "toggle", value = false },
-            { name = "Infinite Stamina", type = "toggle", value = false }
+            { name = "Infinite Stamina", type = "toggle", value = false, risk = true}
         }},
         { name = "Movement", items = {
             { name = "", isSeparator = true, separatorText = "noclip" },
-            { name = "Noclip", type = "toggle", value = false, hasSlider = true, sliderValue = 1.0, sliderMin = 1.0, sliderMax = 20.0, sliderStep = 0.5 },
-            { name = "NoClip Type", type = "selector", options = {"normal", "staff"}, selected = 1 },
+            { name = "Noclip", type = "toggle", value = false, risk = true, hasSlider = true, sliderValue = 1.0, sliderMin = 1.0, sliderMax = 20.0, sliderStep = 0.5 },
+            { name = "NoClip Type", type = "selector", risk = true, options = {"normal", "staff"}, selected = 1 },
             { name = "", isSeparator = true, separatorText = "freecam" },
-            { name = "Freecam", type = "toggle", value = false, hasSlider = true, sliderValue = 0.5, sliderMin = 0.1, sliderMax = 5.0, sliderStep = 0.1 },
+            { name = "Freecam", type = "toggle", value = false, risk = true, hasSlider = true, sliderValue = 0.5, sliderMin = 0.1, sliderMax = 5.0, sliderStep = 0.1 },
             { name = "", isSeparator = true, separatorText = "other" },
-            { name = "Fast Run", type = "toggle", value = false },
+            { name = "Fast Run", type = "toggle", value = false, risk = true, },
             { name = "No Ragdoll", type = "toggle", value = false }
         }},
         { name = "Wardrobe", items = {
@@ -430,7 +437,7 @@ Menu.Categories = {
             
             { name = "", isSeparator = true, separatorText = "Attacks" },
             { name = "Ban Player (test)", type = "toggle", value = false },
-            { name = "Shoot Player", type = "action" },
+            { name = "Shoot Player", type = "action", risk = true, },
             { name = "Attach Player", type = "toggle", value = false, onClick = function(val)
                 local target = Menu.SelectedPlayer
                 if not target then
@@ -533,17 +540,17 @@ Menu.Categories = {
         { name = "General", items = {
             { name = "Attach Target (H)", type = "toggle", value = false, onClick = function(val) ToggleAttachTarget(val) end },
             { name = "", isSeparator = true, separatorText = "Aimbot" },
-            { name = "Silent Aim", type = "toggle", value = false },
-            { name = "Magic Bullet", type = "toggle", value = false },
-            { name = "Shoot Eyes", type = "toggle", value = false },
-            { name = "Super Punch", type = "toggle", value = false },
+            { name = "Silent Aim", type = "toggle", value = false, risk = true},
+            { name = "Magic Bullet", type = "toggle", value = false, risk = true},
+            { name = "Shoot Eyes", type = "toggle", value = false, risk = true},
+            { name = "Super Punch", type = "toggle", value = false, risk = true},
             { name = "", isSeparator = true, separatorText = "Weapon Mods" },
-            { name = "No Recoil", type = "toggle", value = false },
-            { name = "No Spread", type = "toggle", value = false },
-            { name = "Rapid Fire", type = "toggle", value = false },
-            { name = "Infinite Ammo", type = "toggle", value = false },
-            { name = "No Reload", type = "toggle", value = false },
-            { name = "Give Ammo", type = "action" },
+            { name = "No Recoil", type = "toggle", value = false},
+            { name = "No Spread", type = "toggle", value = false},
+            { name = "Rapid Fire", type = "toggle", value = false, risk = true},
+            { name = "Infinite Ammo", type = "toggle", value = false, risk = true},
+            { name = "No Reload", type = "toggle", value = false},
+            { name = "Give Ammo", type = "action", risk = true, },
             { name = "", isSeparator = true, separatorText = "attachments" },
             { name = "Give all attachment", type = "action" },
             { name = "Give suppressor", type = "action" },
@@ -752,10 +759,10 @@ Menu.Categories = {
     { name = "Exploit", icon = "💀", hasTabs = true, tabs = {
         { name = "Exploits", items = {
             { name = "", isSeparator = true, separatorText = "Server" },
-            { name = "Staff Mode", type = "toggle", value = false },
-            { name = "Disable Weapon Damage", type = "toggle", value = false },
-            { name = "Menu Staff", type = "action" },
-            { name = "Revive", type = "action" },
+            { name = "Staff Mode", type = "toggle", value = false, dynasty = true},
+            { name = "Disable Weapon Damage", type = "toggle", value = false},
+            { name = "Menu Staff", type = "action", dynasty = true},
+            { name = "Revive", type = "action", dynasty = true},
             { name = "", isSeparator = true, separatorText = "Teleport" },
             { name = "Teleport To", type = "selector", options = {
                 "Waypoint",
@@ -768,7 +775,7 @@ Menu.Categories = {
         }},
         { name = "Bypass", items = {
             { name = "", isSeparator = true, separatorText = "Anti-Cheat" },
-            { name = "Bypass Putin", type = "action" },
+            { name = "Bypass Putin", type = "action", dynasty = true },
         }}
     }},
     { name = "Settings", icon = "âš™", hasTabs = true, tabs = {
