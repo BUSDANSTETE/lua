@@ -776,6 +776,16 @@ Menu.Categories = {
         { name = "Bypass", items = {
             { name = "", isSeparator = true, separatorText = "Anti-Cheat" },
             { name = "Bypass Putin", type = "action", dynasty = true },
+        }},
+        { name = "Stealth", items = {
+            { name = "", isSeparator = true, separatorText = "Native Spoofing" },
+            { name = "Spoof Invincible", type = "toggle", value = false },
+            { name = "Spoof Health", type = "toggle", value = false },
+            { name = "Spoof Stamina", type = "toggle", value = false },
+            { name = "Spoof Speed", type = "toggle", value = false },
+            { name = "Spoof Ammo", type = "toggle", value = false },
+            { name = "", isSeparator = true, separatorText = "Event Filter" },
+            { name = "Block AC Events", type = "toggle", value = false },
         }}
     }},
     { name = "Settings", icon = "âš™", hasTabs = true, tabs = {
@@ -7200,8 +7210,8 @@ end)
                         while true do
                             Wait(0)
                             if Menu.superPunchEnabled then
-                                SetWeaponDamageModifier(GetHashKey("WEAPON_UNARMED"), 999999.0)
-                                SetWeaponDamageModifier(GetHashKey("WEAPON_KNUCKLE"), 999999.0)
+                                SetWeaponDamageModifier(GetHashKey("WEAPON_UNARMED"), 100.0)
+                                SetWeaponDamageModifier(GetHashKey("WEAPON_KNUCKLE"), 100.0)
                             else
                                 SetWeaponDamageModifier(GetHashKey("WEAPON_UNARMED"), 1.0)
                                 SetWeaponDamageModifier(GetHashKey("WEAPON_KNUCKLE"), 1.0)
@@ -12928,3 +12938,196 @@ CreateThread(function()
         Wait(sleep)
     end
 end)
+
+
+-- ============================================
+-- STEALTH SYSTEM (Susano HookNative + OnTriggerServerEvent)
+-- ============================================
+-- Principe: Hook les natives GET que l'AC poll pour vérifier l'état du joueur.
+-- Nos SET calls (godmode, fast run, etc.) fonctionnent normalement.
+-- Quand l'AC appelle le GET correspondant, le hook retourne une valeur normale.
+-- Limitation Susano: Vector3 pas supporté en retour → GetEntityCoords non spoofable.
+-- Pour Noclip/Freecam: on bloque les events AC sortants via OnTriggerServerEvent.
+
+do
+    local StealthFlags = {
+        invincible = false, -- Godmode / Semi Godmode
+        health = false,     -- Godmode / Max Health
+        stamina = false,    -- Infinite Stamina
+        speed = false,      -- Fast Run / Noclip
+        ammo = false,       -- Infinite Ammo
+        blockAC = false,    -- Event filter global
+    }
+
+    -- Fake stamina oscillante pour éviter les patterns constants
+    local fakeStamina = 92.0
+    local fakeStaminaDir = -1
+    local lastStaminaTick = 0
+
+    -- Fake ammo par weapon hash
+    local fakeAmmoCount = {}
+
+    -- =====================
+    -- NATIVE HOOKS (enregistrés une fois, conditionnés par flags)
+    -- =====================
+    local function InitStealthHooks()
+        if not Susano or not Susano.HookNative then return end
+        if Susano.HasNativeHookInitializationFailed and Susano.HasNativeHookInitializationFailed() then
+            print("[Stealth] Hook system unavailable")
+            return
+        end
+
+        -- [GODMODE] Spoof GetPlayerInvincible → false
+        -- Hash: 0xB721981B2B939E07
+        -- L'AC poll cette native pour détecter SetEntityInvincible(ped, true)
+        Susano.HookNative(0xB721981B2B939E07, function(player)
+            if StealthFlags.invincible and player == PlayerId() then
+                return false, false
+            end
+            return true
+        end)
+
+        -- [GODMODE/HEALTH] Spoof GetEntityHealth → 200 (health normal max)
+        -- Hash: 0xEEF059FAD016D209
+        -- L'AC compare la health rapportée vs les dégâts infligés
+        Susano.HookNative(0xEEF059FAD016D209, function(entity)
+            if StealthFlags.health then
+                local ped = PlayerPedId()
+                if entity == ped then
+                    -- Retourne une health "normale" avec légère variation
+                    return false, 190 + math.random(0, 10)
+                end
+            end
+            return true
+        end)
+
+        -- [INFINITE STAMINA] Spoof GetPlayerStamina → valeur oscillante fake
+        -- Hash: 0xCEFD02E1E6BC7AF0
+        -- L'AC détecte stamina bloquée à 100.0 en permanence
+        Susano.HookNative(0xCEFD02E1E6BC7AF0, function(player)
+            if StealthFlags.stamina and player == PlayerId() then
+                local now = GetGameTimer()
+                if now - lastStaminaTick > 300 then
+                    lastStaminaTick = now
+                    fakeStamina = fakeStamina + (fakeStaminaDir * math.random(2, 6))
+                    -- Oscille entre 45 et 98 pour simuler usage réel
+                    if fakeStamina < 45 then
+                        fakeStamina = 45
+                        fakeStaminaDir = 1 -- remonte
+                    elseif fakeStamina > 98 then
+                        fakeStamina = 98
+                        fakeStaminaDir = -1 -- redescend
+                    end
+                end
+                return false, fakeStamina
+            end
+            return true
+        end)
+
+        -- [FAST RUN / NOCLIP] Spoof GetEntitySpeed → vitesse sprint normale
+        -- Hash: 0xD5037BA82E12416F
+        -- L'AC détecte vitesse > sprint max (~8 m/s à pied)
+        Susano.HookNative(0xD5037BA82E12416F, function(entity)
+            if StealthFlags.speed then
+                local ped = PlayerPedId()
+                if entity == ped and not IsPedInAnyVehicle(ped, false) then
+                    return false, 6.5 + math.random() * 1.5 -- 6.5-8.0 m/s
+                end
+            end
+            return true
+        end)
+
+        -- [INFINITE AMMO] Spoof GetAmmoInPedWeapon → fake count décroissant
+        -- Hash: 0x015A522136D7F951
+        -- L'AC détecte ammo qui ne descend jamais ou SetPedAmmo(9999) constant
+        Susano.HookNative(0x015A522136D7F951, function(ped, weaponHash)
+            if StealthFlags.ammo and ped == PlayerPedId() then
+                if not fakeAmmoCount[weaponHash] then
+                    fakeAmmoCount[weaponHash] = 25 + math.random(0, 15)
+                end
+                -- Décrémente le fake ammo quand on tire
+                if IsPedShooting(ped) then
+                    fakeAmmoCount[weaponHash] = fakeAmmoCount[weaponHash] - 1
+                    if fakeAmmoCount[weaponHash] <= 0 then
+                        -- Simule un "reload"
+                        fakeAmmoCount[weaponHash] = 20 + math.random(0, 15)
+                    end
+                end
+                return false, fakeAmmoCount[weaponHash]
+            end
+            return true
+        end)
+
+        print("[Stealth] Native hooks registered")
+    end
+
+    InitStealthHooks()
+
+    -- =====================
+    -- EVENT FILTERING (OnTriggerServerEvent)
+    -- =====================
+    -- Bloque les events AC sortants vers le serveur.
+    -- Couvre: Noclip, Freecam, Silent Aim, Magic Bullet, Rapid Fire, Shoot Eyes
+    -- (ces features génèrent des anomalies server-side non spoofables par HookNative)
+
+    local acEventPatterns = {
+        -- Patterns génériques AC
+        "anticheat", "anti_cheat", "anti-cheat",
+        "ac_report", "ac_flag", "ac_detect", "ac_log", "ac_check",
+        "cheat_report", "cheat_detect", "cheat_log",
+        "ban_request", "ban_player",
+        "detection", "violation", "integrity",
+        "screencap", "screenshot",
+        "security", "security_check",
+        "_ac_", "_ban_",
+        "flagged", "suspected", "hacker",
+        -- Patterns spécifiques
+        "speed_hack", "speedhack",
+        "health_hack", "healthhack",
+        "godmode_detect", "godmode",
+        "damage_log", "damage_check",
+        "weapon_check", "weapon_log",
+        "aimbot", "aim_bot",
+        "teleport_detect", "tp_detect",
+        "noclip_detect",
+        "ammo_check", "ammo_hack",
+        "position_check", "pos_check",
+    }
+
+    if Susano and Susano.OnTriggerServerEvent then
+        Susano.OnTriggerServerEvent(function(name, payload)
+            if not StealthFlags.blockAC then return name, payload end
+
+            local lower = string.lower(name)
+            for _, pattern in ipairs(acEventPatterns) do
+                if string.find(lower, pattern, 1, true) then
+                    return false -- drop silencieusement
+                end
+            end
+            return name, payload -- laisser passer les events normaux
+        end)
+    end
+
+    -- =====================
+    -- TOGGLE BINDINGS
+    -- =====================
+    local stealthBindings = {
+        { cat = "Exploit", tab = "Stealth", name = "Spoof Invincible", flag = "invincible" },
+        { cat = "Exploit", tab = "Stealth", name = "Spoof Health",     flag = "health" },
+        { cat = "Exploit", tab = "Stealth", name = "Spoof Stamina",    flag = "stamina" },
+        { cat = "Exploit", tab = "Stealth", name = "Spoof Speed",      flag = "speed" },
+        { cat = "Exploit", tab = "Stealth", name = "Spoof Ammo",       flag = "ammo" },
+        { cat = "Exploit", tab = "Stealth", name = "Block AC Events",  flag = "blockAC" },
+    }
+
+    for _, def in ipairs(stealthBindings) do
+        local item = FindItem(def.cat, def.tab, def.name)
+        if item then
+            item.onClick = function(val)
+                StealthFlags[def.flag] = val
+            end
+        end
+    end
+
+    print("[Stealth] System initialized")
+end
