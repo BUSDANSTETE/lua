@@ -11928,11 +11928,11 @@ function Menu.ActionPedFlood()
             end)
 
             -- =============================================
-            -- PHASE 2 : LOCAL PEDS (isNetwork = false)
+            -- PHASE 2 : NETWORKED PEDS + ANTI-GC
             -- =============================================
-            -- CreatePed avec isNetwork=false → le serveur ne voit PAS ces entités.
-            -- Entités locales = pas de limite server entity pool, pas de flag AC.
-            -- On peut donc push les nombres au max + invincible (local = invisible AC).
+            -- isNetwork=true pour que RAGE ne les GC pas.
+            -- SetEntityAsMissionEntity empêche le cleanup automatique.
+            -- Protection AC = SpoofPed + OnTriggerServerEvent block.
             for wave = 1, 25 do
                 CreateThread(function()
                     Wait(wave * 80)
@@ -11952,19 +11952,17 @@ function Menu.ActionPedFlood()
                         local y = tc.y + math.sin(angle) * radius
 
                         local modelHash = loadedModels[math.random(1, #loadedModels)]
-                        -- isNetwork = false → entité locale, invisible server-side
-                        local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, false, false)
+                        local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, true, false)
 
                         if ped and ped ~= 0 then
+                            SetEntityAsMissionEntity(ped, true, true)
+                            SetEntityInvincible(ped, true)
                             SetPedCombatAttributes(ped, 46, true)
                             SetPedCombatAttributes(ped, 5, true)
                             SetPedFleeAttributes(ped, 0, false)
                             SetBlockingOfNonTemporaryEvents(ped, true)
                             SetPedKeepTask(ped, true)
                             SetPedSuffersCriticalHits(ped, false)
-                            -- Local = AC ne voit pas → invincible safe
-                            SetEntityInvincible(ped, true)
-                            -- Tous armés pour max particles/physics
                             GiveWeaponToPed(ped, 0x1B06D571, 9999, false, true)
                             TaskCombatPed(ped, tPed, 0, 16)
                         end
@@ -11973,36 +11971,6 @@ function Menu.ActionPedFlood()
                     end
                 end)
             end
-
-            -- =============================================
-            -- PHASE 3 : HEALTH REGEN LOOP (remplace invincible)
-            -- =============================================
-            -- Au lieu de SetEntityInvincible (détecté), on regen la HP de tous
-            -- les peds spawnés en boucle. L'AC ne flag pas SetEntityHealth sur des NPCs.
-            CreateThread(function()
-                Wait(2000) -- Attendre que les premières vagues spawn
-                local regenActive = true
-
-                -- Auto-stop après 30s
-                CreateThread(function()
-                    Wait(30000)
-                    regenActive = false
-                end)
-
-                while regenActive do
-                    local pool = GetGamePool("CPed")
-                    local myPed = PlayerPedId()
-                    for _, ped in ipairs(pool) do
-                        if ped ~= myPed and DoesEntityExist(ped) and not IsPedAPlayer(ped) then
-                            local hp = GetEntityHealth(ped)
-                            if hp > 0 and hp < 5000 then
-                                SetEntityHealth(ped, 5000)
-                            end
-                        end
-                    end
-                    Wait(500)
-                end
-            end)
 
             -- Désactiver SpoofPed après les vagues + cleanup modèles
             CreateThread(function()
