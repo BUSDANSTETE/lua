@@ -11928,11 +11928,15 @@ function Menu.ActionPedFlood()
             end)
 
             -- =============================================
-            -- PHASE 2 : NETWORKED PEDS + ANTI-GC
+            -- PHASE 2 : LOCAL PEDS + ANTI-GC
             -- =============================================
-            -- isNetwork=true pour que RAGE ne les GC pas.
-            -- SetEntityAsMissionEntity empêche le cleanup automatique.
-            -- Protection AC = SpoofPed + OnTriggerServerEvent block.
+            -- isNetwork=false → serveur ne voit rien.
+            -- SetEntityAsMissionEntity → RAGE ne cleanup pas.
+            -- Handles stockés dans _G table → Lua GC ne release pas.
+            -- SetPedPopulationBudget(3) → max budget population engine.
+            if not _G._pedFloodStore then _G._pedFloodStore = {} end
+            SetPedPopulationBudget(3)
+
             for wave = 1, 25 do
                 CreateThread(function()
                     Wait(wave * 80)
@@ -11952,10 +11956,13 @@ function Menu.ActionPedFlood()
                         local y = tc.y + math.sin(angle) * radius
 
                         local modelHash = loadedModels[math.random(1, #loadedModels)]
-                        local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, true, false)
+                        local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, false, false)
 
                         if ped and ped ~= 0 then
+                            -- Anti-GC : mission entity + stocker le handle
                             SetEntityAsMissionEntity(ped, true, true)
+                            _G._pedFloodStore[#_G._pedFloodStore + 1] = ped
+
                             SetEntityInvincible(ped, true)
                             SetPedCombatAttributes(ped, 46, true)
                             SetPedCombatAttributes(ped, 5, true)
