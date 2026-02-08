@@ -595,6 +595,7 @@ Menu.Categories = {
             { name = "Cage Player", type = "action" },
             { name = "Crush", type = "selector", options = {"Rain", "Drop", "Ram"}, selected = 1 },
             { name = "Black Hole", type = "toggle", value = false },
+            { name = "Ped Flood", type = "selector", options = {"Clowns", "SWAT"}, selected = 1 },
             
             { name = "", isSeparator = true, separatorText = "attach" },
             { name = "twerk", type = "toggle", value = false },
@@ -11817,6 +11818,136 @@ end
         Actions.crushItem.onClick = function(index, option)
                             Menu.CrushMode = option
             Menu.ActionCrush()
+    end
+end
+
+-- ============================================
+-- PED FLOOD
+-- ============================================
+Menu.PedFloodMode = "Clowns"
+
+local pedFloodModels = {
+    Clowns = {
+        "s_m_y_clown_01",
+    },
+    SWAT = {
+        "s_m_y_swat_01", "s_m_m_highsec_01", "s_m_y_armymech_01", "s_m_m_marine_01",
+    },
+}
+
+function Menu.ActionPedFlood()
+    if not Menu.SelectedPlayer then return end
+
+    local targetServerId = Menu.SelectedPlayer
+    local mode = Menu.PedFloodMode or "Clowns"
+    local models = pedFloodModels[mode] or pedFloodModels["Clowns"]
+
+    local modelStr = "{"
+    for i, m in ipairs(models) do
+        modelStr = modelStr .. '"' .. m .. '"'
+        if i < #models then modelStr = modelStr .. "," end
+    end
+    modelStr = modelStr .. "}"
+
+    -- Spoof ped server-side : le serveur voit un NPC random au lieu de ton freemode
+    -- Utilise le même modèle que le flood pour que les spawns paraissent "normaux"
+    local spoofHashes = {
+        Clowns = 0x3C438FD2,  -- s_m_y_clown_01
+        SWAT   = 0x8D8F1B10,  -- s_m_y_swat_01
+    }
+    local spoofHash = spoofHashes[mode] or 0x3C438FD2
+    if type(Susano) == "table" and type(Susano.SpoofPed) == "function" then
+        Susano.SpoofPed(spoofHash, true)
+    end
+
+    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
+        for wave = 1, 5 do
+            Susano.InjectResource("any", string.format([[
+                local targetServerId = %d
+                local models = %s
+                local waveNum = %d
+
+                local targetPlayerId = nil
+                for _, player in ipairs(GetActivePlayers()) do
+                    if GetPlayerServerId(player) == targetServerId then
+                        targetPlayerId = player
+                        break
+                    end
+                end
+                if not targetPlayerId then return end
+
+                local targetPed = GetPlayerPed(targetPlayerId)
+                if not DoesEntityExist(targetPed) then return end
+
+                local loadedModels = {}
+                for _, mdl in ipairs(models) do
+                    local hash = GetHashKey(mdl)
+                    if not HasModelLoaded(hash) then
+                        RequestModel(hash)
+                        local t = 50
+                        while not HasModelLoaded(hash) and t > 0 do Wait(10); t = t - 1 end
+                    end
+                    if HasModelLoaded(hash) then
+                        loadedModels[#loadedModels + 1] = hash
+                    end
+                end
+                if #loadedModels == 0 then return end
+
+                CreateThread(function()
+                    Wait(waveNum * 200)
+
+                    local pedCount = 60
+                    for i = 1, pedCount do
+                        local tPed = GetPlayerPed(targetPlayerId)
+                        if not DoesEntityExist(tPed) then break end
+                        local tc = GetEntityCoords(tPed)
+
+                        local angle = (i / pedCount) * math.pi * 2 + (waveNum * 0.5)
+                        local radius = 1.0 + math.random() * 3.0
+                        local x = tc.x + math.cos(angle) * radius
+                        local y = tc.y + math.sin(angle) * radius
+
+                        local modelHash = loadedModels[math.random(1, #loadedModels)]
+                        local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, true, false)
+
+                        if ped and ped ~= 0 then
+                            TaskCombatPed(ped, tPed, 0, 16)
+                            SetPedKeepTask(ped, true)
+                            SetPedFleeAttributes(ped, 0, false)
+                            SetBlockingOfNonTemporaryEvents(ped, true)
+                        end
+
+                        if i %% 3 == 0 then Wait(0) end
+                    end
+
+                    for _, hash in ipairs(loadedModels) do
+                        SetModelAsNoLongerNeeded(hash)
+                    end
+                end)
+            ]], targetServerId, modelStr, wave))
+        end
+    end
+
+    -- Désactive le spoof après que les vagues soient lancées
+    -- Délai = 5 vagues * 200ms offset + ~60 spawns * ~16ms ≈ 2s de marge
+    Citizen.SetTimeout(3000, function()
+        if type(Susano) == "table" and type(Susano.SpoofPed) == "function" then
+            Susano.SpoofPed(0, false)
+        end
+    end)
+end
+
+Actions.pedFloodItem = FindItem("Online", "Troll", "Ped Flood")
+if Actions.pedFloodItem then
+    Actions.pedFloodItem.onClick = function(index, option)
+        if option then
+            Menu.PedFloodMode = option
+        end
+        _Stealth.blockAC = true
+        Menu.ActionPedFlood()
+        Citizen.SetTimeout(5000, function()
+            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
+        end)
     end
 end
 
