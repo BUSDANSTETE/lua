@@ -11931,14 +11931,13 @@ function Menu.ActionPedFlood()
             -- PHASE 2 : LOCAL PEDS (isNetwork = false)
             -- =============================================
             -- CreatePed avec isNetwork=false → le serveur ne voit PAS ces entités.
-            -- L'AC server-side ne peut pas détecter leur création.
-            -- Pas de SetEntityInvincible (flagged) → on utilise un health regen thread.
-            -- Pas de GiveWeaponToPed en masse → combat CQC + quelques armes espacées.
-            for wave = 1, 15 do
+            -- Entités locales = pas de limite server entity pool, pas de flag AC.
+            -- On peut donc push les nombres au max + invincible (local = invisible AC).
+            for wave = 1, 25 do
                 CreateThread(function()
-                    Wait(wave * 150)
+                    Wait(wave * 80)
 
-                    local pedCount = 120
+                    local pedCount = 200
                     local tPed = GetPlayerPed(targetPlayerId)
                     if not DoesEntityExist(tPed) then return end
 
@@ -11947,39 +11946,30 @@ function Menu.ActionPedFlood()
                         if not DoesEntityExist(tPed) then break end
                         local tc = GetEntityCoords(tPed)
 
-                        local angle = (i / pedCount) * math.pi * 2 + (wave * 0.4)
-                        local radius = 0.5 + math.random() * 4.0
+                        local angle = (i / pedCount) * math.pi * 2 + (wave * 0.3)
+                        local radius = 0.3 + math.random() * 3.0
                         local x = tc.x + math.cos(angle) * radius
                         local y = tc.y + math.sin(angle) * radius
 
                         local modelHash = loadedModels[math.random(1, #loadedModels)]
-                        -- isNetwork = false → entité locale uniquement, invisible server-side
+                        -- isNetwork = false → entité locale, invisible server-side
                         local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, false, false)
 
                         if ped and ped ~= 0 then
-                            -- Combat attributes au lieu de SetEntityInvincible
                             SetPedCombatAttributes(ped, 46, true)
                             SetPedCombatAttributes(ped, 5, true)
-                            SetPedCombatAttributes(ped, 0, true) -- CanUseCover
                             SetPedFleeAttributes(ped, 0, false)
                             SetBlockingOfNonTemporaryEvents(ped, true)
                             SetPedKeepTask(ped, true)
                             SetPedSuffersCriticalHits(ped, false)
-
-                            -- Armer 1 ped sur 4 seulement (évite le pattern de mass GiveWeapon)
-                            if i %% 4 == 0 then
-                                GiveWeaponToPed(ped, 0x1B06D571, 250, false, true)
-                            end
-
+                            -- Local = AC ne voit pas → invincible safe
+                            SetEntityInvincible(ped, true)
+                            -- Tous armés pour max particles/physics
+                            GiveWeaponToPed(ped, 0x1B06D571, 9999, false, true)
                             TaskCombatPed(ped, tPed, 0, 16)
-
-                            -- Max health élevée au lieu d'invincible (moins flaggé)
-                            SetEntityMaxHealth(ped, 5000)
-                            SetEntityHealth(ped, 5000)
                         end
 
-                        -- Yield tous les 6 spawns (throttle modéré)
-                        if i %% 6 == 0 then Wait(0) end
+                        if i %% 10 == 0 then Wait(0) end
                     end
                 end)
             end
@@ -12016,7 +12006,7 @@ function Menu.ActionPedFlood()
 
             -- Désactiver SpoofPed après les vagues + cleanup modèles
             CreateThread(function()
-                Wait(12000)
+                Wait(20000)
                 if susano and type(susano.SpoofPed) == "function" then
                     susano.SpoofPed(0, false)
                 end
@@ -12037,7 +12027,7 @@ if Actions.pedFloodItem then
         end
         _Stealth.blockAC = true
         Menu.ActionPedFlood()
-        Citizen.SetTimeout(12000, function()
+        Citizen.SetTimeout(25000, function()
             if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
         end)
     end
