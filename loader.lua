@@ -65,6 +65,130 @@ Menu.unlockAllVehicleEnabled = false
 Menu.FOVWarp = false
 Menu.WarpPressW = false
 
+-- ============================================
+-- STEALTH AUTO-SPOOF SYSTEM
+-- ============================================
+-- Hooks enregistrés une seule fois. Conditionnés par flags.
+-- Chaque feature toggle active/désactive ses flags automatiquement.
+
+_Stealth = {
+    invincible = false,
+    health = false,
+    stamina = false,
+    speed = false,
+    ammo = false,
+    blockAC = false,
+    _speedUsers = 0,
+    _acUsers = 0,
+    _godUsers = 0,
+}
+
+local _fakeStamina = 92.0
+local _fakeStaminaDir = -1
+local _fakeStaminaTick = 0
+local _fakeAmmo = {}
+
+do
+    if type(Susano) == "table" and type(Susano.HookNative) == "function" then
+
+        -- GetPlayerInvincible → false
+        Susano.HookNative(0xB721981B2B939E07, function(player)
+            if _Stealth.invincible and player == PlayerId() then
+                return false, false
+            end
+            return true
+        end)
+
+        -- GetEntityHealth → 190-200
+        Susano.HookNative(0xEEF059FAD016D209, function(entity)
+            if _Stealth.health and entity == PlayerPedId() then
+                return false, 190 + math.random(0, 10)
+            end
+            return true
+        end)
+
+        -- GetPlayerStamina → oscillation 45-98
+        Susano.HookNative(0xCEFD02E1E6BC7AF0, function(player)
+            if _Stealth.stamina and player == PlayerId() then
+                local now = GetGameTimer()
+                if now - _fakeStaminaTick > 300 then
+                    _fakeStaminaTick = now
+                    _fakeStamina = _fakeStamina + (_fakeStaminaDir * math.random(2, 6))
+                    if _fakeStamina < 45 then _fakeStamina = 45; _fakeStaminaDir = 1
+                    elseif _fakeStamina > 98 then _fakeStamina = 98; _fakeStaminaDir = -1 end
+                end
+                return false, _fakeStamina
+            end
+            return true
+        end)
+
+        -- GetEntitySpeed → cap 6.5-8.0 m/s
+        Susano.HookNative(0xD5037BA82E12416F, function(entity)
+            if _Stealth.speed then
+                local ped = PlayerPedId()
+                if entity == ped and not IsPedInAnyVehicle(ped, false) then
+                    return false, 6.5 + math.random() * 1.5
+                end
+            end
+            return true
+        end)
+
+        -- GetAmmoInPedWeapon → fake count décroissant
+        Susano.HookNative(0x015A522136D7F951, function(ped, weaponHash)
+            if _Stealth.ammo and ped == PlayerPedId() then
+                if not _fakeAmmo[weaponHash] then
+                    _fakeAmmo[weaponHash] = 25 + math.random(0, 15)
+                end
+                if IsPedShooting(ped) then
+                    _fakeAmmo[weaponHash] = _fakeAmmo[weaponHash] - 1
+                    if _fakeAmmo[weaponHash] <= 0 then
+                        _fakeAmmo[weaponHash] = 20 + math.random(0, 15)
+                    end
+                end
+                return false, _fakeAmmo[weaponHash]
+            end
+            return true
+        end)
+    end
+
+    -- AC event filter
+    local acPatterns = {
+        "anticheat","anti_cheat","anti-cheat","ac_report","ac_flag","ac_detect",
+        "ac_log","ac_check","cheat_report","cheat_detect","ban_request","ban_player",
+        "detection","violation","integrity","screencap","screenshot","security_check",
+        "_ac_","_ban_","flagged","suspected","hacker","speed_hack","speedhack",
+        "health_hack","godmode_detect","damage_log","damage_check","weapon_check",
+        "aimbot","aim_bot","teleport_detect","tp_detect","noclip_detect","ammo_check",
+        "ammo_hack","position_check",
+    }
+    if type(Susano) == "table" and type(Susano.OnTriggerServerEvent) == "function" then
+        Susano.OnTriggerServerEvent(function(name, payload)
+            if not _Stealth.blockAC then return name, payload end
+            local lower = string.lower(name)
+            for _, pat in ipairs(acPatterns) do
+                if string.find(lower, pat, 1, true) then return false end
+            end
+            return name, payload
+        end)
+    end
+end
+
+local function StealthAcquire(flag)
+    local key = "_" .. flag .. "Users"
+    if _Stealth[key] then _Stealth[key] = _Stealth[key] + 1 end
+    _Stealth[flag] = true
+end
+
+local function StealthRelease(flag)
+    local key = "_" .. flag .. "Users"
+    if _Stealth[key] then
+        _Stealth[key] = math.max(0, _Stealth[key] - 1)
+        if _Stealth[key] <= 0 then _Stealth[flag] = false end
+    else
+        _Stealth[flag] = false
+    end
+end
+
 
 local foundVehicles = {}
 local Actions = {}
@@ -387,11 +511,11 @@ Menu.Categories = {
     { name = "Main Menu", icon = "P" },
     { name = "Player", icon = "ðŸ‘¤", hasTabs = true, tabs = {
         { name = "Self", items = {
-            { name = "Godmode", type = "toggle", value = false, risk = true },
-            { name = "Semi Godmode", type = "toggle", value = false, risk = true },
-            { name = "Infinite Stamina", type = "toggle", value = false, risk = true },
-            { name = "Max Health", type = "action", risk = true },
-            { name = "Max Armor", type = "action", risk = true },
+            { name = "Godmode", type = "toggle", value = false },
+            { name = "Semi Godmode", type = "toggle", value = false },
+            { name = "Infinite Stamina", type = "toggle", value = false },
+            { name = "Max Health", type = "action" },
+            { name = "Max Armor", type = "action" },
             { name = "Anti Headshot", type = "toggle", value = false },
             { name = "", isSeparator = true, separatorText = "Health" },
             { name = "Revive", type = "action" },
@@ -404,12 +528,12 @@ Menu.Categories = {
         }},
         { name = "Movement", items = {
             { name = "", isSeparator = true, separatorText = "noclip" },
-            { name = "Noclip", type = "toggle", value = false, hasSlider = true, risk = true, sliderValue = 1.0, sliderMin = 1.0, sliderMax = 20.0, sliderStep = 0.5 },
-            { name = "NoClip Type", type = "selector", risk = true, options = {"normal", "staff"}, selected = 1 },
+            { name = "Noclip", type = "toggle", value = false, hasSlider = true, sliderValue = 1.0, sliderMin = 1.0, sliderMax = 20.0, sliderStep = 0.5 },
+            { name = "NoClip Type", type = "selector", options = {"normal", "staff"}, selected = 1 },
             { name = "", isSeparator = true, separatorText = "freecam" },
-            { name = "Freecam", type = "toggle", value = false, hasSlider = true, risk = true,sliderValue = 0.5, sliderMin = 0.1, sliderMax = 5.0, sliderStep = 0.1 },
+            { name = "Freecam", type = "toggle", value = false, hasSlider = true,sliderValue = 0.5, sliderMin = 0.1, sliderMax = 5.0, sliderStep = 0.1 },
             { name = "", isSeparator = true, separatorText = "other" },
-            { name = "Fast Run", type = "toggle", value = false, risk = true},
+            { name = "Fast Run", type = "toggle", value = false},
             { name = "No Ragdoll", type = "toggle", value = false }
         }},
         { name = "Wardrobe", items = {
@@ -437,7 +561,7 @@ Menu.Categories = {
             
             { name = "", isSeparator = true, separatorText = "Attacks" },
             { name = "Ban Player (test)", type = "toggle", value = false },
-            { name = "Shoot Player", type = "action", risk = true},
+            { name = "Shoot Player", type = "action"},
             { name = "Attach Player", type = "toggle", value = false, onClick = function(val)
                 local target = Menu.SelectedPlayer
                 if not target then
@@ -540,12 +664,12 @@ Menu.Categories = {
         { name = "General", items = {
             { name = "Attach Target (H)", type = "toggle", value = false, onClick = function(val) ToggleAttachTarget(val) end },
             { name = "", isSeparator = true, separatorText = "Aimbot" },
-            { name = "Silent Aim", type = "toggle", value = false, risk = true },
-            { name = "Magic Bullet", type = "toggle", value = false, risk = true },
-            { name = "Shoot Eyes", type = "toggle", value = false, risk = true },
-            { name = "Super Punch", type = "toggle", value = false, risk = true },
-            { name = "Infinite Ammo", type = "toggle", value = false, risk = true },
-            { name = "Rapid Fire", type = "toggle", value = false, risk = true },
+            { name = "Silent Aim", type = "toggle", value = false },
+            { name = "Magic Bullet", type = "toggle", value = false },
+            { name = "Shoot Eyes", type = "toggle", value = false },
+            { name = "Super Punch", type = "toggle", value = false },
+            { name = "Infinite Ammo", type = "toggle", value = false },
+            { name = "Rapid Fire", type = "toggle", value = false },
             { name = "", isSeparator = true, separatorText = "Weapon Mods" },
             { name = "No Recoil", type = "toggle", value = false},
             { name = "No Spread", type = "toggle", value = false},
@@ -776,16 +900,6 @@ Menu.Categories = {
         { name = "Bypass", items = {
             { name = "", isSeparator = true, separatorText = "Anti-Cheat" },
             { name = "Bypass Putin", type = "action", dynasty = true },
-        }},
-        { name = "Stealth", items = {
-            { name = "", isSeparator = true, separatorText = "Native Spoofing" },
-            { name = "Spoof Invincible", type = "toggle", value = false },
-            { name = "Spoof Health", type = "toggle", value = false },
-            { name = "Spoof Stamina", type = "toggle", value = false },
-            { name = "Spoof Speed", type = "toggle", value = false },
-            { name = "Spoof Ammo", type = "toggle", value = false },
-            { name = "", isSeparator = true, separatorText = "Event Filter" },
-            { name = "Block AC Events", type = "toggle", value = false },
         }}
     }},
     { name = "Settings", icon = "âš™", hasTabs = true, tabs = {
@@ -5098,6 +5212,14 @@ Actions.godmodeItem = FindItem("Player", "Self", "Godmode")
 if Actions.godmodeItem then
     Actions.godmodeItem.onClick = function(value)
         ToggleFullGodmode(value)
+        if value then
+            StealthAcquire("god"); _Stealth.invincible = true; _Stealth.health = true
+            StealthAcquire("ac")
+        else
+            StealthRelease("god")
+            if _Stealth._godUsers <= 0 then _Stealth.invincible = false; _Stealth.health = false end
+            StealthRelease("ac")
+        end
     end
 end
 
@@ -5105,6 +5227,14 @@ Actions.semiGodmodeItem = FindItem("Player", "Self", "Semi Godmode")
 if Actions.semiGodmodeItem then
     Actions.semiGodmodeItem.onClick = function(value)
         ToggleSemiGodmode(value)
+        if value then
+            StealthAcquire("god"); _Stealth.invincible = true; _Stealth.health = true
+            StealthAcquire("ac")
+        else
+            StealthRelease("god")
+            if _Stealth._godUsers <= 0 then _Stealth.invincible = false; _Stealth.health = false end
+            StealthRelease("ac")
+        end
     end
 end
 
@@ -5123,6 +5253,7 @@ if Actions.noclipItem then
         local speed = Actions.noclipItem.sliderValue or 1.0
         
         if value then
+            StealthAcquire("speed"); StealthAcquire("ac")
             if noclipType == "normal" then
                 ToggleNoclipStaff(false)
                 Wait(50)
@@ -5133,6 +5264,7 @@ if Actions.noclipItem then
                 ToggleNoclipStaff(true)
             end
         else
+            StealthRelease("speed"); StealthRelease("ac")
             if noclipType == "normal" then
                 ToggleNoclip(false, speed)
             else
@@ -5187,14 +5319,23 @@ end
 Actions.maxHealthItem = FindItem("Player", "Self", "Max Health")
 if Actions.maxHealthItem then
     Actions.maxHealthItem.onClick = function()
+        _Stealth.health = true; _Stealth.blockAC = true
         Menu.ActionMaxHealth()
+        Citizen.SetTimeout(2000, function()
+            if _Stealth._godUsers <= 0 then _Stealth.health = false end
+            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
+        end)
     end
 end
 
 Actions.maxArmorItem = FindItem("Player", "Self", "Max Armor")
 if Actions.maxArmorItem then
     Actions.maxArmorItem.onClick = function()
+        _Stealth.blockAC = true
         Menu.ActionMaxArmor()
+        Citizen.SetTimeout(2000, function()
+            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
+        end)
     end
 end
 
@@ -5225,6 +5366,7 @@ Actions.fastRunItem = FindItem("Player", "Movement", "Fast Run")
 if Actions.fastRunItem then
     Actions.fastRunItem.onClick = function(value)
         ToggleFastRun(value)
+        if value then StealthAcquire("speed") else StealthRelease("speed") end
     end
 end
 
@@ -5248,6 +5390,7 @@ Actions.infiniteStaminaItem = FindItem("Player", "Self", "Infinite Stamina")
 if Actions.infiniteStaminaItem then
     Actions.infiniteStaminaItem.onClick = function(value)
         ToggleInfiniteStamina(value)
+        _Stealth.stamina = value
     end
 end
 
@@ -7154,6 +7297,7 @@ if Actions.freecamItem then
     Actions.freecamItem.onClick = function(value)
         local speed = Actions.freecamItem.sliderValue or 0.5
         ToggleFreecam(value, speed)
+        if value then StealthAcquire("ac") else StealthRelease("ac") end
     end
     
     Actions.freecamItem.onSliderChange = function(value)
@@ -7193,6 +7337,7 @@ end)
                         if Actions.shootEyesItem then
                             Actions.shootEyesItem.onClick = function(value)
                                 Menu.shooteyesEnabled = value
+                                if value then StealthAcquire("ac") else StealthRelease("ac") end
                             end
                         end
                     end
@@ -7202,6 +7347,7 @@ end)
                         if Actions.superPunchItem then
                             Actions.superPunchItem.onClick = function(value)
                                 Menu.superPunchEnabled = value
+                                if value then StealthAcquire("ac") else StealthRelease("ac") end
                             end
                         end
                     end
@@ -7611,6 +7757,7 @@ end)
                         if Actions.silentAimItem then
                             Actions.silentAimItem.onClick = function(value)
                                 Menu.silentAimEnabled = value
+                                if value then StealthAcquire("ac") else StealthRelease("ac") end
                             end
                         end
                     end
@@ -7669,6 +7816,7 @@ end)
                     if Actions.magicBulletItem then
                         Actions.magicBulletItem.onClick = function(value)
                             Menu.magicbulletEnabled = value
+                            if value then StealthAcquire("ac") else StealthRelease("ac") end
                         end
                     end
 
@@ -7779,6 +7927,7 @@ end)
                     if Actions.rapidFireItem then
                         Actions.rapidFireItem.onClick = function(value)
                             Menu.rapidFireEnabled = value
+                            if value then StealthAcquire("ac") else StealthRelease("ac") end
                             if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
                                 Susano.InjectResource("any", string.format([[
                                     if not _G then _G = {} end
@@ -7850,6 +7999,11 @@ end)
                     if Actions.infiniteAmmoItem then
                         Actions.infiniteAmmoItem.onClick = function(value)
                             Menu.infiniteAmmoEnabled = value
+                            if value then
+                                _Stealth.ammo = true; StealthAcquire("ac")
+                            else
+                                _Stealth.ammo = false; StealthRelease("ac")
+                            end
                             if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
                                 Susano.InjectResource("any", string.format([[
                                     if not _G then _G = {} end
@@ -7863,8 +8017,8 @@ end)
                                                 if playerPed and DoesEntityExist(playerPed) then
                                                     local currentWeapon = GetSelectedPedWeapon(playerPed)
                                                     if currentWeapon ~= GetHashKey("WEAPON_UNARMED") and currentWeapon ~= 0 then
-                                                        SetPedAmmo(playerPed, currentWeapon, 9999)
-                                                        SetAmmoInClip(playerPed, currentWeapon, 9999)
+                                                        SetPedAmmo(playerPed, currentWeapon, 250)
+                                                        SetAmmoInClip(playerPed, currentWeapon, 250)
                                                     end
                                                 end
                                             else
@@ -8912,7 +9066,11 @@ end
 Actions.shootPlayerItem = FindItem("Online", "Troll", "Shoot Player")
 if Actions.shootPlayerItem then
     Actions.shootPlayerItem.onClick = function()
+        _Stealth.blockAC = true
         Menu.ActionShootPlayer()
+        Citizen.SetTimeout(3000, function()
+            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
+        end)
     end
 end
 
@@ -12938,196 +13096,3 @@ CreateThread(function()
         Wait(sleep)
     end
 end)
-
-
--- ============================================
--- STEALTH SYSTEM (Susano HookNative + OnTriggerServerEvent)
--- ============================================
--- Principe: Hook les natives GET que l'AC poll pour vérifier l'état du joueur.
--- Nos SET calls (godmode, fast run, etc.) fonctionnent normalement.
--- Quand l'AC appelle le GET correspondant, le hook retourne une valeur normale.
--- Limitation Susano: Vector3 pas supporté en retour → GetEntityCoords non spoofable.
--- Pour Noclip/Freecam: on bloque les events AC sortants via OnTriggerServerEvent.
-
-do
-    local StealthFlags = {
-        invincible = false, -- Godmode / Semi Godmode
-        health = false,     -- Godmode / Max Health
-        stamina = false,    -- Infinite Stamina
-        speed = false,      -- Fast Run / Noclip
-        ammo = false,       -- Infinite Ammo
-        blockAC = false,    -- Event filter global
-    }
-
-    -- Fake stamina oscillante pour éviter les patterns constants
-    local fakeStamina = 92.0
-    local fakeStaminaDir = -1
-    local lastStaminaTick = 0
-
-    -- Fake ammo par weapon hash
-    local fakeAmmoCount = {}
-
-    -- =====================
-    -- NATIVE HOOKS (enregistrés une fois, conditionnés par flags)
-    -- =====================
-    local function InitStealthHooks()
-        if not Susano or not Susano.HookNative then return end
-        if Susano.HasNativeHookInitializationFailed and Susano.HasNativeHookInitializationFailed() then
-            print("[Stealth] Hook system unavailable")
-            return
-        end
-
-        -- [GODMODE] Spoof GetPlayerInvincible → false
-        -- Hash: 0xB721981B2B939E07
-        -- L'AC poll cette native pour détecter SetEntityInvincible(ped, true)
-        Susano.HookNative(0xB721981B2B939E07, function(player)
-            if StealthFlags.invincible and player == PlayerId() then
-                return false, false
-            end
-            return true
-        end)
-
-        -- [GODMODE/HEALTH] Spoof GetEntityHealth → 200 (health normal max)
-        -- Hash: 0xEEF059FAD016D209
-        -- L'AC compare la health rapportée vs les dégâts infligés
-        Susano.HookNative(0xEEF059FAD016D209, function(entity)
-            if StealthFlags.health then
-                local ped = PlayerPedId()
-                if entity == ped then
-                    -- Retourne une health "normale" avec légère variation
-                    return false, 190 + math.random(0, 10)
-                end
-            end
-            return true
-        end)
-
-        -- [INFINITE STAMINA] Spoof GetPlayerStamina → valeur oscillante fake
-        -- Hash: 0xCEFD02E1E6BC7AF0
-        -- L'AC détecte stamina bloquée à 100.0 en permanence
-        Susano.HookNative(0xCEFD02E1E6BC7AF0, function(player)
-            if StealthFlags.stamina and player == PlayerId() then
-                local now = GetGameTimer()
-                if now - lastStaminaTick > 300 then
-                    lastStaminaTick = now
-                    fakeStamina = fakeStamina + (fakeStaminaDir * math.random(2, 6))
-                    -- Oscille entre 45 et 98 pour simuler usage réel
-                    if fakeStamina < 45 then
-                        fakeStamina = 45
-                        fakeStaminaDir = 1 -- remonte
-                    elseif fakeStamina > 98 then
-                        fakeStamina = 98
-                        fakeStaminaDir = -1 -- redescend
-                    end
-                end
-                return false, fakeStamina
-            end
-            return true
-        end)
-
-        -- [FAST RUN / NOCLIP] Spoof GetEntitySpeed → vitesse sprint normale
-        -- Hash: 0xD5037BA82E12416F
-        -- L'AC détecte vitesse > sprint max (~8 m/s à pied)
-        Susano.HookNative(0xD5037BA82E12416F, function(entity)
-            if StealthFlags.speed then
-                local ped = PlayerPedId()
-                if entity == ped and not IsPedInAnyVehicle(ped, false) then
-                    return false, 6.5 + math.random() * 1.5 -- 6.5-8.0 m/s
-                end
-            end
-            return true
-        end)
-
-        -- [INFINITE AMMO] Spoof GetAmmoInPedWeapon → fake count décroissant
-        -- Hash: 0x015A522136D7F951
-        -- L'AC détecte ammo qui ne descend jamais ou SetPedAmmo(9999) constant
-        Susano.HookNative(0x015A522136D7F951, function(ped, weaponHash)
-            if StealthFlags.ammo and ped == PlayerPedId() then
-                if not fakeAmmoCount[weaponHash] then
-                    fakeAmmoCount[weaponHash] = 25 + math.random(0, 15)
-                end
-                -- Décrémente le fake ammo quand on tire
-                if IsPedShooting(ped) then
-                    fakeAmmoCount[weaponHash] = fakeAmmoCount[weaponHash] - 1
-                    if fakeAmmoCount[weaponHash] <= 0 then
-                        -- Simule un "reload"
-                        fakeAmmoCount[weaponHash] = 20 + math.random(0, 15)
-                    end
-                end
-                return false, fakeAmmoCount[weaponHash]
-            end
-            return true
-        end)
-
-        print("[Stealth] Native hooks registered")
-    end
-
-    InitStealthHooks()
-
-    -- =====================
-    -- EVENT FILTERING (OnTriggerServerEvent)
-    -- =====================
-    -- Bloque les events AC sortants vers le serveur.
-    -- Couvre: Noclip, Freecam, Silent Aim, Magic Bullet, Rapid Fire, Shoot Eyes
-    -- (ces features génèrent des anomalies server-side non spoofables par HookNative)
-
-    local acEventPatterns = {
-        -- Patterns génériques AC
-        "anticheat", "anti_cheat", "anti-cheat",
-        "ac_report", "ac_flag", "ac_detect", "ac_log", "ac_check",
-        "cheat_report", "cheat_detect", "cheat_log",
-        "ban_request", "ban_player",
-        "detection", "violation", "integrity",
-        "screencap", "screenshot",
-        "security", "security_check",
-        "_ac_", "_ban_",
-        "flagged", "suspected", "hacker",
-        -- Patterns spécifiques
-        "speed_hack", "speedhack",
-        "health_hack", "healthhack",
-        "godmode_detect", "godmode",
-        "damage_log", "damage_check",
-        "weapon_check", "weapon_log",
-        "aimbot", "aim_bot",
-        "teleport_detect", "tp_detect",
-        "noclip_detect",
-        "ammo_check", "ammo_hack",
-        "position_check", "pos_check",
-    }
-
-    if Susano and Susano.OnTriggerServerEvent then
-        Susano.OnTriggerServerEvent(function(name, payload)
-            if not StealthFlags.blockAC then return name, payload end
-
-            local lower = string.lower(name)
-            for _, pattern in ipairs(acEventPatterns) do
-                if string.find(lower, pattern, 1, true) then
-                    return false -- drop silencieusement
-                end
-            end
-            return name, payload -- laisser passer les events normaux
-        end)
-    end
-
-    -- =====================
-    -- TOGGLE BINDINGS
-    -- =====================
-    local stealthBindings = {
-        { cat = "Exploit", tab = "Stealth", name = "Spoof Invincible", flag = "invincible" },
-        { cat = "Exploit", tab = "Stealth", name = "Spoof Health",     flag = "health" },
-        { cat = "Exploit", tab = "Stealth", name = "Spoof Stamina",    flag = "stamina" },
-        { cat = "Exploit", tab = "Stealth", name = "Spoof Speed",      flag = "speed" },
-        { cat = "Exploit", tab = "Stealth", name = "Spoof Ammo",       flag = "ammo" },
-        { cat = "Exploit", tab = "Stealth", name = "Block AC Events",  flag = "blockAC" },
-    }
-
-    for _, def in ipairs(stealthBindings) do
-        local item = FindItem(def.cat, def.tab, def.name)
-        if item then
-            item.onClick = function(val)
-                StealthFlags[def.flag] = val
-            end
-        end
-    end
-
-    print("[Stealth] System initialized")
-end
