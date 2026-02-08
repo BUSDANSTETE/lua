@@ -1445,7 +1445,7 @@ function Menu.DrawFooter()
     local scaledFooterSize = footerSize * scale
     local footerTextY = footerY + (footerHeight / 2) - (scaledFooterSize / 2) + (1 * scale)
 
-    local footerText = "B U S D A N S T E T E <3"
+    local footerText = ""
     local currentX = x + footerPadding
 
     local textWidth = 0
@@ -2934,4 +2934,5 @@ end
 
 
 return Menu
+
 
