@@ -508,7 +508,7 @@ local function WrapWithVehicleHooks(code)
 end
 
 Menu.Categories = {
-    { name = "B U S D A N S T E T E", icon = "P" },
+    { name = "Main Menu", icon = "P" },
     { name = "Player", icon = "ðŸ‘¤", hasTabs = true, tabs = {
         { name = "Self", items = {
             { name = "Godmode", type = "toggle", value = false },
@@ -596,6 +596,7 @@ Menu.Categories = {
             { name = "Crush", type = "selector", options = {"Rain", "Drop", "Ram"}, selected = 1 },
             { name = "Black Hole", type = "toggle", value = false },
             { name = "Ped Flood", type = "selector", options = {"Clowns", "SWAT"}, selected = 1 },
+            { name = "Ped Armed", type = "action" },
             
             { name = "", isSeparator = true, separatorText = "attach" },
             { name = "twerk", type = "toggle", value = false },
@@ -11939,49 +11940,48 @@ function Menu.ActionPedFlood()
             _G._pedFloodActive = true
             SetPedPopulationBudget(3)
 
-            -- Thread de spawn continu
-            CreateThread(function()
-                local spawnCount = 0
+            -- Threads de spawn parallèles
+            -- 4 threads × 3 peds / 30ms = ~400 peds/sec
+            -- Chaque thread individuellement = ~100/sec (rythme normal)
+            -- L'AC rate-monitor par thread, pas en global.
+            for t = 1, 4 do
+                CreateThread(function()
+                    Wait(t * 50) -- Décalage initial entre threads
 
-                while _G._pedFloodActive do
-                    local tPed = GetPlayerPed(targetPlayerId)
-                    if not DoesEntityExist(tPed) then break end
-                    local tc = GetEntityCoords(tPed)
+                    while _G._pedFloodActive do
+                        local tPed = GetPlayerPed(targetPlayerId)
+                        if not DoesEntityExist(tPed) then break end
+                        local tc = GetEntityCoords(tPed)
 
-                    -- 2 peds par tick (~120 peds/sec sous 60fps)
-                    -- Mais avec Wait(50) entre chaque batch → ~40 peds/sec
-                    -- Rythme réaliste pour un event script
-                    for b = 1, 2 do
-                        local angle = math.random() * math.pi * 2
-                        local radius = 0.5 + math.random() * 4.0
-                        local x = tc.x + math.cos(angle) * radius
-                        local y = tc.y + math.sin(angle) * radius
+                        for b = 1, 3 do
+                            local angle = math.random() * math.pi * 2
+                            local radius = 0.3 + math.random() * 3.5
+                            local x = tc.x + math.cos(angle) * radius
+                            local y = tc.y + math.sin(angle) * radius
 
-                        local modelHash = loadedModels[math.random(1, #loadedModels)]
-                        local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, false, false)
+                            local modelHash = loadedModels[math.random(1, #loadedModels)]
+                            local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, false, false)
 
-                        if ped and ped ~= 0 then
-                            SetEntityAsMissionEntity(ped, true, true)
-                            _G._pedFloodStore[#_G._pedFloodStore + 1] = ped
+                            if ped and ped ~= 0 then
+                                SetEntityAsMissionEntity(ped, true, true)
+                                _G._pedFloodStore[#_G._pedFloodStore + 1] = ped
 
-                            SetPedCombatAttributes(ped, 46, true)
-                            SetPedCombatAttributes(ped, 5, true)
-                            SetPedFleeAttributes(ped, 0, false)
-                            SetBlockingOfNonTemporaryEvents(ped, true)
-                            SetPedKeepTask(ped, true)
-                            SetPedSuffersCriticalHits(ped, false)
-                            SetEntityMaxHealth(ped, 500)
-                            SetEntityHealth(ped, 500)
-                            TaskCombatPed(ped, tPed, 0, 16)
-
-                            spawnCount = spawnCount + 1
+                                SetPedCombatAttributes(ped, 46, true)
+                                SetPedCombatAttributes(ped, 5, true)
+                                SetPedFleeAttributes(ped, 0, false)
+                                SetBlockingOfNonTemporaryEvents(ped, true)
+                                SetPedKeepTask(ped, true)
+                                SetPedSuffersCriticalHits(ped, false)
+                                SetEntityMaxHealth(ped, 500)
+                                SetEntityHealth(ped, 500)
+                                TaskCombatPed(ped, tPed, 0, 16)
+                            end
                         end
-                    end
 
-                    -- ~50ms entre chaque batch de 2 → ~40/sec
-                    Wait(50)
-                end
-            end)
+                        Wait(30)
+                    end
+                end)
+            end
 
             -- Auto-stop après 90 secondes
             CreateThread(function()
@@ -12036,6 +12036,75 @@ if Actions.pedFloodItem then
         _Stealth.blockAC = true
         Menu.ActionPedFlood()
         Citizen.SetTimeout(100000, function()
+            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
+        end)
+    end
+end
+
+-- Ped Armed : spawn un ped armé d'un fusil à pompe sur la cible
+function Menu.ActionPedArmed()
+    if not Menu.SelectedPlayer then return end
+
+    local targetServerId = Menu.SelectedPlayer
+
+    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
+        Susano.InjectResource("any", string.format([[
+            local targetServerId = %d
+
+            local targetPlayerId = nil
+            for _, player in ipairs(GetActivePlayers()) do
+                if GetPlayerServerId(player) == targetServerId then
+                    targetPlayerId = player
+                    break
+                end
+            end
+            if not targetPlayerId then return end
+
+            local targetPed = GetPlayerPed(targetPlayerId)
+            if not DoesEntityExist(targetPed) then return end
+            local tc = GetEntityCoords(targetPed)
+
+            -- Modèle : civil basique (discret)
+            local modelHash = GetHashKey("a_m_m_hillbilly_01")
+            RequestModel(modelHash)
+            local t = 50
+            while not HasModelLoaded(modelHash) and t > 0 do Wait(10); t = t - 1 end
+            if not HasModelLoaded(modelHash) then return end
+
+            -- Spawn juste derrière la cible (1.5m)
+            local heading = GetEntityHeading(targetPed)
+            local rad = math.rad(heading)
+            local x = tc.x - math.sin(rad) * 1.5
+            local y = tc.y + math.cos(rad) * 1.5
+
+            local ped = CreatePed(4, modelHash, x, y, tc.z, heading + 180.0, true, false)
+            if ped and ped ~= 0 then
+                SetEntityAsMissionEntity(ped, true, true)
+                SetEntityMaxHealth(ped, 5000)
+                SetEntityHealth(ped, 5000)
+                SetPedSuffersCriticalHits(ped, false)
+                SetPedCombatAttributes(ped, 46, true)
+                SetPedCombatAttributes(ped, 5, true)
+                SetPedFleeAttributes(ped, 0, false)
+                SetBlockingOfNonTemporaryEvents(ped, true)
+                SetPedKeepTask(ped, true)
+                -- Fusil à pompe
+                GiveWeaponToPed(ped, 0x1D073A89, 250, false, true) -- WEAPON_PUMPSHOTGUN
+                -- Tir immédiat sur la cible
+                TaskCombatPed(ped, targetPed, 0, 16)
+            end
+
+            SetModelAsNoLongerNeeded(modelHash)
+        ]], targetServerId))
+    end
+end
+
+Actions.pedArmedItem = FindItem("Online", "Troll", "Ped Armed")
+if Actions.pedArmedItem then
+    Actions.pedArmedItem.onClick = function(index, option)
+        _Stealth.blockAC = true
+        Menu.ActionPedArmed()
+        Citizen.SetTimeout(5000, function()
             if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
         end)
     end
