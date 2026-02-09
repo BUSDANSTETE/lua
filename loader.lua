@@ -508,7 +508,7 @@ local function WrapWithVehicleHooks(code)
 end
 
 Menu.Categories = {
-    { name = "Main Menu", icon = "P" },
+    { name = "Juro X BusDansTete X Guigoo", icon = "P" },
     { name = "Player", icon = "ðŸ‘¤", hasTabs = true, tabs = {
         { name = "Self", items = {
             { name = "Godmode", type = "toggle", value = false },
@@ -700,7 +700,9 @@ Menu.Categories = {
             { name = "give weapon_aks74u", type = "action" },
             { name = "give WEAPON_ASSAULTXMAS", type = "action" },
             { name = "give weapon_scar17", type = "action" },
-            { name = "give weapon_blacksniper", type = "action" }
+            { name = "give weapon_blacksniper", type = "action" },
+            { name = "give weapon_hkhall", type = "action" },
+            { name = "give weapon_hk_ump", type = "action" }
         }}
     }},
     { name = "Vehicle", icon = "ðŸš—", hasTabs = true, tabs = {
@@ -7388,7 +7390,9 @@ end)
                             {name = "give weapon_aks74u", weapon = "weapon_aks74u"},
                             {name = "give WEAPON_ASSAULTXMAS", weapon = "WEAPON_ASSAULTXMAS"},
                             {name = "give weapon_scar17", weapon = "weapon_scar17"},
-                            {name = "give weapon_blacksniper", weapon = "weapon_blacksniper"}
+                            {name = "give weapon_blacksniper", weapon = "weapon_blacksniper"},
+                            {name = "give weapon_hkhall", weapon = "weapon_hkhall"},
+                            {name = "give weapon_hk_ump", weapon = "weapon_hk_ump"}
                         }
                         
                         local weaponHashMap = {
@@ -7407,6 +7411,8 @@ end)
                             ["WEAPON_ASSAULTXMAS"] = GetHashKey("WEAPON_ASSAULTXMAS"),
                             ["weapon_scar17"] = GetHashKey("weapon_scar17"),
                             ["weapon_blacksniper"] = GetHashKey("weapon_blacksniper"),
+                            ["weapon_hkhall"] = GetHashKey("weapon_hkhall"),
+                            ["weapon_hk_ump"] = GetHashKey("weapon_hk_ump"),
                         }
 
                         local function GiveWeaponByHash(hash, ammo)
