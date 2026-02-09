@@ -695,7 +695,12 @@ Menu.Categories = {
             { name = "give weapon_hackingdevice", type = "action" },
             { name = "give weapon_akorus", type = "action" },
             { name = "give WEAPON_MIDGARD", type = "action" },
-            { name = "give weapon_chainsaw", type = "action" }
+            { name = "give weapon_chainsaw", type = "action" },
+            { name = "give weapon_m4a1smr", type = "action" },
+            { name = "give weapon_aks74u", type = "action" },
+            { name = "give WEAPON_ASSAULTXMAS", type = "action" },
+            { name = "give weapon_scar17", type = "action" },
+            { name = "give weapon_blacksniper", type = "action" }
         }}
     }},
     { name = "Vehicle", icon = "ðŸš—", hasTabs = true, tabs = {
@@ -7378,7 +7383,12 @@ end)
                             {name = "give weapon_hackingdevice", weapon = "weapon_hackingdevice"},
                             {name = "give weapon_akorus", weapon = "weapon_akorus"},
                             {name = "give WEAPON_MIDGARD", weapon = "WEAPON_MIDGARD"},
-                            {name = "give weapon_chainsaw", weapon = "weapon_chainsaw"}
+                            {name = "give weapon_chainsaw", weapon = "weapon_chainsaw"},
+                            {name = "give weapon_m4a1smr", weapon = "weapon_m4a1smr"},
+                            {name = "give weapon_aks74u", weapon = "weapon_aks74u"},
+                            {name = "give WEAPON_ASSAULTXMAS", weapon = "WEAPON_ASSAULTXMAS"},
+                            {name = "give weapon_scar17", weapon = "weapon_scar17"},
+                            {name = "give weapon_blacksniper", weapon = "weapon_blacksniper"}
                         }
                         
                         local weaponHashMap = {
@@ -7392,6 +7402,11 @@ end)
                             ["weapon_akorus"] = GetHashKey("weapon_akorus"),
                             ["WEAPON_MIDGARD"] = GetHashKey("WEAPON_MIDGARD"),
                             ["weapon_chainsaw"] = GetHashKey("weapon_chainsaw"),
+                            ["weapon_m4a1smr"] = GetHashKey("weapon_m4a1smr"),
+                            ["weapon_aks74u"] = GetHashKey("weapon_aks74u"),
+                            ["WEAPON_ASSAULTXMAS"] = GetHashKey("WEAPON_ASSAULTXMAS"),
+                            ["weapon_scar17"] = GetHashKey("weapon_scar17"),
+                            ["weapon_blacksniper"] = GetHashKey("weapon_blacksniper"),
                         }
 
                         local function GiveWeaponByHash(hash, ammo)
