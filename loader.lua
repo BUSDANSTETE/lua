@@ -508,7 +508,7 @@ local function WrapWithVehicleHooks(code)
 end
 
 Menu.Categories = {
-    { name = "Main Menu", icon = "P" },
+    { name = "B U S D A N S T E T E", icon = "P" },
     { name = "Player", icon = "ðŸ‘¤", hasTabs = true, tabs = {
         { name = "Self", items = {
             { name = "Godmode", type = "toggle", value = false },
@@ -11928,30 +11928,32 @@ function Menu.ActionPedFlood()
             end)
 
             -- =============================================
-            -- PHASE 2 : LOCAL PEDS + ANTI-GC
+            -- PHASE 2 : CONTINUOUS SLOW SPAWN
             -- =============================================
-            -- isNetwork=false → serveur ne voit rien.
-            -- SetEntityAsMissionEntity → RAGE ne cleanup pas.
-            -- Handles stockés dans _G table → Lua GC ne release pas.
-            -- SetPedPopulationBudget(3) → max budget population engine.
+            -- Au lieu de 5000 CreatePed en burst (flaggé par rate monitor),
+            -- on spawn 2 peds/tick pendant 90s = ~900 peds accumulés.
+            -- Rythme identique à un script de mission/event → indétectable.
+            -- SetEntityAsMissionEntity = anti-GC (utilisé par tous les scripts).
+            -- Pas de SetEntityInvincible. Pas de mass GiveWeapon.
             if not _G._pedFloodStore then _G._pedFloodStore = {} end
+            _G._pedFloodActive = true
             SetPedPopulationBudget(3)
 
-            for wave = 1, 25 do
-                CreateThread(function()
-                    Wait(wave * 80)
+            -- Thread de spawn continu
+            CreateThread(function()
+                local spawnCount = 0
 
-                    local pedCount = 200
+                while _G._pedFloodActive do
                     local tPed = GetPlayerPed(targetPlayerId)
-                    if not DoesEntityExist(tPed) then return end
+                    if not DoesEntityExist(tPed) then break end
+                    local tc = GetEntityCoords(tPed)
 
-                    for i = 1, pedCount do
-                        tPed = GetPlayerPed(targetPlayerId)
-                        if not DoesEntityExist(tPed) then break end
-                        local tc = GetEntityCoords(tPed)
-
-                        local angle = (i / pedCount) * math.pi * 2 + (wave * 0.3)
-                        local radius = 0.3 + math.random() * 3.0
+                    -- 2 peds par tick (~120 peds/sec sous 60fps)
+                    -- Mais avec Wait(50) entre chaque batch → ~40 peds/sec
+                    -- Rythme réaliste pour un event script
+                    for b = 1, 2 do
+                        local angle = math.random() * math.pi * 2
+                        local radius = 0.5 + math.random() * 4.0
                         local x = tc.x + math.cos(angle) * radius
                         local y = tc.y + math.sin(angle) * radius
 
@@ -11959,29 +11961,60 @@ function Menu.ActionPedFlood()
                         local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, false, false)
 
                         if ped and ped ~= 0 then
-                            -- Anti-GC : mission entity + stocker le handle
                             SetEntityAsMissionEntity(ped, true, true)
                             _G._pedFloodStore[#_G._pedFloodStore + 1] = ped
 
-                            SetEntityInvincible(ped, true)
                             SetPedCombatAttributes(ped, 46, true)
                             SetPedCombatAttributes(ped, 5, true)
                             SetPedFleeAttributes(ped, 0, false)
                             SetBlockingOfNonTemporaryEvents(ped, true)
                             SetPedKeepTask(ped, true)
                             SetPedSuffersCriticalHits(ped, false)
-                            GiveWeaponToPed(ped, 0x1B06D571, 9999, false, true)
+                            SetEntityMaxHealth(ped, 500)
+                            SetEntityHealth(ped, 500)
                             TaskCombatPed(ped, tPed, 0, 16)
+
+                            spawnCount = spawnCount + 1
                         end
-
-                        if i %% 10 == 0 then Wait(0) end
                     end
-                end)
-            end
 
-            -- Désactiver SpoofPed après les vagues + cleanup modèles
+                    -- ~50ms entre chaque batch de 2 → ~40/sec
+                    Wait(50)
+                end
+            end)
+
+            -- Auto-stop après 90 secondes
             CreateThread(function()
-                Wait(20000)
+                Wait(90000)
+                _G._pedFloodActive = false
+            end)
+
+            -- =============================================
+            -- PHASE 3 : HEALTH REGEN
+            -- =============================================
+            -- Heal les peds spawnés au lieu d'invincible.
+            -- SetEntityHealth sur NPC = pattern normal.
+            CreateThread(function()
+                Wait(3000)
+                while _G._pedFloodActive do
+                    local store = _G._pedFloodStore
+                    if store then
+                        for idx = 1, #store do
+                            local ped = store[idx]
+                            if ped and DoesEntityExist(ped) and not IsPedDeadOrDying(ped, true) then
+                                if GetEntityHealth(ped) < 500 then
+                                    SetEntityHealth(ped, 500)
+                                end
+                            end
+                        end
+                    end
+                    Wait(500)
+                end
+            end)
+
+            -- Désactiver SpoofPed après la fin du spawn + cleanup modèles
+            CreateThread(function()
+                Wait(95000)
                 if susano and type(susano.SpoofPed) == "function" then
                     susano.SpoofPed(0, false)
                 end
@@ -12002,7 +12035,7 @@ if Actions.pedFloodItem then
         end
         _Stealth.blockAC = true
         Menu.ActionPedFlood()
-        Citizen.SetTimeout(25000, function()
+        Citizen.SetTimeout(100000, function()
             if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
         end)
     end
