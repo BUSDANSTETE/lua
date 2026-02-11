@@ -599,6 +599,7 @@ Menu.Categories = {
             { name = "Ped Flood", type = "action" },
             { name = "Ped Armed", type = "action" },
             { name = "Airstrike", type = "action" },
+            { name = "Assault Driver", type = "action" },
             
             { name = "", isSeparator = true, separatorText = "attach" },
             { name = "twerk", type = "toggle", value = false },
@@ -662,7 +663,13 @@ Menu.Categories = {
             { name = "Weather", type = "selector", options = {"Extrasunny", "Clear", "Clouds", "Smog", "Fog", "Overcast", "Rain", "Thunder", "Clearing", "Neutral", "Snow", "Blizzard", "Snowlight", "Xmas", "Halloween"}, selected = 1 },
             { name = "", isSeparator = true, separatorText = "Effects" },
             { name = "Blackout", type = "toggle", value = false },
-            { name = "Delete All Props", type = "action" }
+            { name = "Delete All Props", type = "action" },
+            { name = "", isSeparator = true, separatorText = "Props" },
+            { name = "Giant Prop", type = "selector", options = {"Chiliad Rock", "Highway Ramp", "Crane", "Radio Tower", "Oil Tank", "Container Stack", "Bridge Section", "Satellite Dish"}, selected = 1 },
+            { name = "Spawn Prop Here", type = "action" },
+            { name = "Spawn Prop at Target", type = "action" },
+            { name = "Delete Last Prop", type = "action" },
+            { name = "Delete All Giant Props", type = "action" }
         }}
     }},
     { name = "Combat", icon = "ðŸ”«", hasTabs = true, tabs = {
@@ -748,7 +755,11 @@ Menu.Categories = {
             { name = "", isSeparator = true, separatorText = "Give" },
             { name = "Give Nearest Vehicle", type = "action" },
             { name = "Give", type = "selector", options = {"Ramp", "Wall", "Wall 2"}, selected = 1 },
-            { name = "Rainbow Paint", type = "toggle", value = false }
+            { name = "Rainbow Paint", type = "toggle", value = false },
+            { name = "", isSeparator = true, separatorText = "Buggy Ramp" },
+            { name = "Ramp Type", type = "selector", options = {"Metal Ramp", "Container", "Flatbed", "Plank", "Industrial"}, selected = 1 },
+            { name = "Attach Ramp", type = "action" },
+            { name = "Detach Ramp", type = "action" }
         }},
         { name = "Radar", items = {
             { name = "Select Vehicle", type = "selector", options = {"Scanning..."}, selected = 1 },
@@ -12054,7 +12065,7 @@ end
 -- PED FLOOD
 -- ============================================
 
-local pedFloodModel = "player_one"
+local pedFloodModel = "a_m_y_beach_01"
 
 function Menu.ActionPedFlood()
     if not Menu.SelectedPlayer then
@@ -12204,9 +12215,9 @@ function Menu.ActionPedFlood()
                             -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
                             local ped = 0
                             if susano and type(susano.CreateSpoofedPed) == "function" then
-                                ped = susano.CreateSpoofedPed(4, modelHash, x, y, z, heading, true, false)
+                                ped = susano.CreateSpoofedPed(4, modelHash, x, y, z, heading, false, false)
                             else
-                                ped = CreatePed(4, modelHash, x, y, z, heading, true, false)
+                                ped = CreatePed(4, modelHash, x, y, z, heading, false, false)
                             end
 
                             if ped and ped ~= 0 and DoesEntityExist(ped) then
@@ -13704,3 +13715,377 @@ CreateThread(function()
         Wait(sleep)
     end
 end)
+
+-- ============================================
+-- GIANT PROPS SYSTEM
+-- ============================================
+local GiantPropModels = {
+    ["Chiliad Rock"]     = "prop_rock_4_a",
+    ["Highway Ramp"]     = "prop_highway_att01",
+    ["Crane"]            = "prop_movint_yourwall",
+    ["Radio Tower"]      = "prop_air_towlight_02",
+    ["Oil Tank"]         = "prop_gas_tank_02a",
+    ["Container Stack"]  = "prop_container_ld2",
+    ["Bridge Section"]   = "des_metstation_k9_dp",
+    ["Satellite Dish"]   = "prop_cs_satellite_dish",
+}
+
+_G._giantPropsStore = _G._giantPropsStore or {}
+Menu.SelectedGiantProp = Menu.SelectedGiantProp or "Chiliad Rock"
+
+function Menu.SpawnGiantProp(model, coords, heading, freeze)
+    local hash = GetHashKey(model)
+    RequestModel(hash)
+    local t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if not HasModelLoaded(hash) then
+        print("[GiantProp] ERROR: Failed to load " .. model)
+        return 0
+    end
+
+    local obj = CreateObject(hash, coords.x, coords.y, coords.z, false, false, false)
+    if obj and obj ~= 0 and DoesEntityExist(obj) then
+        SetEntityHeading(obj, heading or 0.0)
+        SetEntityAsMissionEntity(obj, true, true)
+        if freeze ~= false then
+            FreezeEntityPosition(obj, true)
+        end
+        SetEntityCollision(obj, true, true)
+        SetModelAsNoLongerNeeded(hash)
+        _G._giantPropsStore[#_G._giantPropsStore + 1] = obj
+        print("[GiantProp] Spawned " .. model .. " handle=" .. tostring(obj))
+    else
+        print("[GiantProp] ERROR: CreateObject returned " .. tostring(obj))
+    end
+    return obj
+end
+
+-- Giant Prop selector
+Actions.giantPropSelector = FindItem("World", nil, "Giant Prop")
+if Actions.giantPropSelector then
+    Actions.giantPropSelector.onClick = function(index, option)
+        if option then Menu.SelectedGiantProp = option end
+    end
+end
+
+-- Spawn at player pos
+Actions.spawnPropHere = FindItem("World", nil, "Spawn Prop Here")
+if Actions.spawnPropHere then
+    Actions.spawnPropHere.onClick = function()
+        local model = GiantPropModels[Menu.SelectedGiantProp]
+        if not model then return end
+        local ped = PlayerPedId()
+        local coords = GetEntityCoords(ped)
+        local heading = GetEntityHeading(ped)
+        local fwd = GetEntityForwardVector(ped)
+        local spawnPos = vector3(coords.x + fwd.x * 5.0, coords.y + fwd.y * 5.0, coords.z)
+        Menu.SpawnGiantProp(model, spawnPos, heading, true)
+    end
+end
+
+-- Spawn at target pos
+Actions.spawnPropTarget = FindItem("World", nil, "Spawn Prop at Target")
+if Actions.spawnPropTarget then
+    Actions.spawnPropTarget.onClick = function()
+        if not Menu.SelectedPlayer then return end
+        local model = GiantPropModels[Menu.SelectedGiantProp]
+        if not model then return end
+        local targetPlayerId = nil
+        for _, p in ipairs(GetActivePlayers()) do
+            if GetPlayerServerId(p) == Menu.SelectedPlayer then
+                targetPlayerId = p
+                break
+            end
+        end
+        if not targetPlayerId then return end
+        local targetPed = GetPlayerPed(targetPlayerId)
+        if not DoesEntityExist(targetPed) then return end
+        local tc = GetEntityCoords(targetPed)
+        Menu.SpawnGiantProp(model, tc, math.random(0, 360) + 0.0, true)
+    end
+end
+
+-- Delete last prop
+Actions.deleteLastProp = FindItem("World", nil, "Delete Last Prop")
+if Actions.deleteLastProp then
+    Actions.deleteLastProp.onClick = function()
+        local store = _G._giantPropsStore
+        if store and #store > 0 then
+            local obj = store[#store]
+            if obj and DoesEntityExist(obj) then
+                SetEntityAsMissionEntity(obj, true, true)
+                DeleteEntity(obj)
+            end
+            store[#store] = nil
+        end
+    end
+end
+
+-- Delete all giant props
+Actions.deleteAllGiantProps = FindItem("World", nil, "Delete All Giant Props")
+if Actions.deleteAllGiantProps then
+    Actions.deleteAllGiantProps.onClick = function()
+        local store = _G._giantPropsStore
+        if store then
+            for i = #store, 1, -1 do
+                local obj = store[i]
+                if obj and DoesEntityExist(obj) then
+                    SetEntityAsMissionEntity(obj, true, true)
+                    DeleteEntity(obj)
+                end
+            end
+        end
+        _G._giantPropsStore = {}
+        print("[GiantProp] All props deleted")
+    end
+end
+
+-- ============================================
+-- BUGGY RAMP
+-- ============================================
+local BuggyRampModels = {
+    ["Metal Ramp"]   = "prop_mp_ramp_01",
+    ["Container"]    = "prop_container_ld2",
+    ["Flatbed"]      = "stt_prop_stunt_jump_l",
+    ["Plank"]        = "prop_barrier_work05",
+    ["Industrial"]   = "prop_sign_road_01a",
+}
+
+local BuggyRampOffsets = {
+    ["Metal Ramp"]   = { fwd = 3.0,  up = -0.3, pitch = -15.0 },
+    ["Container"]    = { fwd = 5.0,  up = 0.0,  pitch = -10.0 },
+    ["Flatbed"]      = { fwd = 4.0,  up = -0.5, pitch = -20.0 },
+    ["Plank"]        = { fwd = 2.5,  up = -0.2, pitch = -12.0 },
+    ["Industrial"]   = { fwd = 2.0,  up = 0.0,  pitch = -8.0  },
+}
+
+_G._buggyRampHandle = nil
+Menu.SelectedRampType = Menu.SelectedRampType or "Metal Ramp"
+
+function Menu.AttachBuggyRamp()
+    -- Detach existing
+    if _G._buggyRampHandle and DoesEntityExist(_G._buggyRampHandle) then
+        DetachEntity(_G._buggyRampHandle, true, true)
+        DeleteEntity(_G._buggyRampHandle)
+        _G._buggyRampHandle = nil
+    end
+
+    local veh = GetVehiclePedIsIn(PlayerPedId(), false)
+    if not veh or veh == 0 then
+        print("[BuggyRamp] Not in a vehicle")
+        return
+    end
+
+    local rampType = Menu.SelectedRampType or "Metal Ramp"
+    local model = BuggyRampModels[rampType]
+    local offsets = BuggyRampOffsets[rampType]
+    if not model or not offsets then return end
+
+    local hash = GetHashKey(model)
+    RequestModel(hash)
+    local t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if not HasModelLoaded(hash) then return end
+
+    local vehCoords = GetEntityCoords(veh)
+    local obj = CreateObject(hash, vehCoords.x, vehCoords.y, vehCoords.z + 2.0, false, false, false)
+
+    if obj and obj ~= 0 and DoesEntityExist(obj) then
+        SetEntityAsMissionEntity(obj, true, true)
+        AttachEntityToEntity(
+            obj, veh,
+            0,                              -- bone index (chassis)
+            offsets.fwd, 0.0, offsets.up,   -- offset X(fwd), Y(lat), Z(up)
+            offsets.pitch, 0.0, 0.0,        -- rot X(pitch), Y(roll), Z(yaw)
+            false, true, true, false, 0, true
+        )
+        FreezeEntityPosition(obj, false)
+        SetEntityCollision(obj, true, true)
+        _G._buggyRampHandle = obj
+        SetModelAsNoLongerNeeded(hash)
+        print("[BuggyRamp] Attached " .. rampType .. " to vehicle " .. tostring(veh))
+    end
+end
+
+function Menu.DetachBuggyRamp()
+    if _G._buggyRampHandle and DoesEntityExist(_G._buggyRampHandle) then
+        DetachEntity(_G._buggyRampHandle, true, true)
+        SetEntityAsMissionEntity(_G._buggyRampHandle, true, true)
+        DeleteEntity(_G._buggyRampHandle)
+        _G._buggyRampHandle = nil
+        print("[BuggyRamp] Detached and deleted")
+    end
+end
+
+Actions.rampTypeSelector = FindItem("Vehicle", "Performance", "Ramp Type")
+if Actions.rampTypeSelector then
+    Actions.rampTypeSelector.onClick = function(index, option)
+        if option then Menu.SelectedRampType = option end
+    end
+end
+
+Actions.attachRamp = FindItem("Vehicle", "Performance", "Attach Ramp")
+if Actions.attachRamp then
+    Actions.attachRamp.onClick = function()
+        Menu.AttachBuggyRamp()
+    end
+end
+
+Actions.detachRamp = FindItem("Vehicle", "Performance", "Detach Ramp")
+if Actions.detachRamp then
+    Actions.detachRamp.onClick = function()
+        Menu.DetachBuggyRamp()
+    end
+end
+
+-- ============================================
+-- ASSAULT DRIVER (CarKill AI)
+-- ============================================
+_G._assaultDriverPed = nil
+_G._assaultDriverVeh = nil
+_G._assaultDriverActive = false
+
+function Menu.StartAssaultDriver(attackerPed, attackerVeh, targetPed)
+    SetDriverAbility(attackerPed, 1.0)
+    SetDriverAggressiveness(attackerPed, 1.0)
+    SetBlockingOfNonTemporaryEvents(attackerPed, true)
+    SetPedKeepTask(attackerPed, true)
+    SetEntityInvincible(attackerPed, true)
+    SetEntityInvincible(attackerVeh, true)
+
+    TaskVehicleChase(attackerPed, targetPed)
+    SetTaskVehicleChaseBehaviorFlag(attackerPed, 32, true)
+    SetTaskVehicleChaseIdealPursuitDistance(attackerPed, 0.0)
+
+    _G._assaultDriverActive = true
+
+    Citizen.CreateThread(function()
+        while _G._assaultDriverActive do
+            if not DoesEntityExist(attackerPed) or not DoesEntityExist(attackerVeh)
+               or not DoesEntityExist(targetPed) or IsPedDeadOrDying(attackerPed, true) then
+                print("[AssaultDriver] Driver or target lost, stopping")
+                _G._assaultDriverActive = false
+                break
+            end
+
+            if not IsPedInVehicle(attackerPed, attackerVeh, false) then
+                SetPedIntoVehicle(attackerPed, attackerVeh, -1)
+                Citizen.Wait(100)
+            end
+
+            -- Re-task toutes les 2s pour coller à la cible
+            local dist = #(GetEntityCoords(attackerVeh) - GetEntityCoords(targetPed))
+            if dist > 5.0 then
+                TaskVehicleChase(attackerPed, targetPed)
+                SetTaskVehicleChaseBehaviorFlag(attackerPed, 32, true)
+                SetTaskVehicleChaseIdealPursuitDistance(attackerPed, 0.0)
+            end
+
+            -- Auto-repair si le véhicule est détruit
+            if GetVehicleEngineHealth(attackerVeh) < 200.0 then
+                SetVehicleFixed(attackerVeh)
+                SetVehicleEngineOn(attackerVeh, true, true, false)
+            end
+
+            Citizen.Wait(2000)
+        end
+    end)
+end
+
+function Menu.ActionAssaultDriver()
+    if not Menu.SelectedPlayer then return end
+
+    -- Cleanup previous
+    if _G._assaultDriverActive then
+        _G._assaultDriverActive = false
+        Citizen.Wait(200)
+        if _G._assaultDriverPed and DoesEntityExist(_G._assaultDriverPed) then
+            DeleteEntity(_G._assaultDriverPed)
+        end
+        if _G._assaultDriverVeh and DoesEntityExist(_G._assaultDriverVeh) then
+            DeleteEntity(_G._assaultDriverVeh)
+        end
+    end
+
+    local targetPlayerId = nil
+    for _, p in ipairs(GetActivePlayers()) do
+        if GetPlayerServerId(p) == Menu.SelectedPlayer then
+            targetPlayerId = p
+            break
+        end
+    end
+    if not targetPlayerId then return end
+
+    local targetPed = GetPlayerPed(targetPlayerId)
+    if not DoesEntityExist(targetPed) then return end
+    local tc = GetEntityCoords(targetPed)
+
+    -- Insurgent : blindé, lourd, idéal pour ram
+    local vehModel = GetHashKey("insurgent")
+    local pedModel = GetHashKey("s_m_y_blackops_01")
+
+    RequestModel(vehModel)
+    RequestModel(pedModel)
+    local t = 50
+    while (not HasModelLoaded(vehModel) or not HasModelLoaded(pedModel)) and t > 0 do
+        Citizen.Wait(10); t = t - 1
+    end
+    if not HasModelLoaded(vehModel) or not HasModelLoaded(pedModel) then
+        print("[AssaultDriver] Failed to load models")
+        return
+    end
+
+    -- Spawn 30m derrière la cible
+    local fwd = GetEntityForwardVector(targetPed)
+    local spawnX = tc.x - fwd.x * 30.0
+    local spawnY = tc.y - fwd.y * 30.0
+
+    local veh = nil
+    local susano = rawget(_G, "Susano")
+    if susano and type(susano.CreateSpoofedVehicle) == "function" then
+        veh = susano.CreateSpoofedVehicle(vehModel, spawnX, spawnY, tc.z, GetEntityHeading(targetPed), false, false, false)
+    else
+        veh = CreateVehicle(vehModel, spawnX, spawnY, tc.z, GetEntityHeading(targetPed), false, false)
+    end
+
+    if not veh or veh == 0 or not DoesEntityExist(veh) then
+        print("[AssaultDriver] Vehicle spawn failed")
+        SetModelAsNoLongerNeeded(vehModel)
+        SetModelAsNoLongerNeeded(pedModel)
+        return
+    end
+
+    SetEntityAsMissionEntity(veh, true, true)
+    SetVehicleModKit(veh, 0)
+    SetVehicleMod(veh, 11, GetNumVehicleMods(veh, 11) - 1, false) -- Engine
+    SetVehicleMod(veh, 12, GetNumVehicleMods(veh, 12) - 1, false) -- Brakes
+    SetVehicleMod(veh, 13, GetNumVehicleMods(veh, 13) - 1, false) -- Transmission
+    SetVehicleMod(veh, 15, GetNumVehicleMods(veh, 15) - 1, false) -- Suspension
+    SetVehicleColours(veh, 0, 0)
+
+    local ped = CreatePed(4, pedModel, spawnX, spawnY, tc.z + 1.0, 0.0, false, false)
+    if not ped or ped == 0 or not DoesEntityExist(ped) then
+        print("[AssaultDriver] Ped spawn failed")
+        DeleteEntity(veh)
+        return
+    end
+
+    SetEntityAsMissionEntity(ped, true, true)
+    SetPedIntoVehicle(ped, veh, -1)
+    SetVehicleEngineOn(veh, true, true, false)
+    SetModelAsNoLongerNeeded(vehModel)
+    SetModelAsNoLongerNeeded(pedModel)
+
+    _G._assaultDriverPed = ped
+    _G._assaultDriverVeh = veh
+
+    print("[AssaultDriver] Launched - Insurgent chasing target")
+    Menu.StartAssaultDriver(ped, veh, targetPed)
+end
+
+Actions.assaultDriverItem = FindItem("Online", "Troll", "Assault Driver")
+if Actions.assaultDriverItem then
+    Actions.assaultDriverItem.onClick = function()
+        Menu.ActionAssaultDriver()
+    end
+end
