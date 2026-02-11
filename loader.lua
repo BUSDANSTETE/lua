@@ -562,6 +562,7 @@ Menu.Categories = {
             { name = "", isSeparator = true, separatorText = "Attacks" },
             { name = "Ban Player (test)", type = "toggle", value = false },
             { name = "Shoot Player", type = "action"},
+            { name = "Ragdoll", type = "action"},
             { name = "Attach Player", type = "toggle", value = false, onClick = function(val)
                 local target = Menu.SelectedPlayer
                 if not target then
@@ -3058,7 +3059,7 @@ local function SpawnVehicle(modelName)
                          offsetZ = groundZ + 0.5 
                      end 
                      
-                     local vehicle = CreateVehicle(modelHash, offsetX, offsetY, offsetZ, heading, true, false) 
+                     local vehicle = Susano.CreateSpoofedVehicle(modelHash, offsetX, offsetY, offsetZ, heading, true, true, false) 
                      if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then 
                          local netId = NetworkGetNetworkIdFromEntity(vehicle) 
                          if netId and netId ~= 0 then 
@@ -9915,7 +9916,7 @@ function Menu.ActionAirstrike()
                 local spawnY = tc.y + math.random(-3, 3)
                 local spawnZ = tc.z + 60.0
 
-                local heli = CreateVehicle(modelHash, spawnX, spawnY, spawnZ, math.random(0, 360) + 0.0, false, false)
+                local heli = Susano.CreateSpoofedVehicle(modelHash, spawnX, spawnY, spawnZ, math.random(0, 360) + 0.0, false, false, false)
                 if not heli or heli == 0 then
                     SetModelAsNoLongerNeeded(modelHash)
                     return
@@ -12227,6 +12228,35 @@ if Actions.pedFloodItem then
 end
 
 -- Ped Armed : spawn un ped armé d'un fusil à pompe sur la cible
+-- Ragdoll : force le ragdoll sur la cible via Susano.RequestRagdoll
+function Menu.ActionRagdoll()
+    if not Menu.SelectedPlayer then return end
+    local targetServerId = Menu.SelectedPlayer
+
+    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
+        Susano.InjectResource("any", string.format([[
+            local targetServerId = %d
+
+            local targetPlayerId = nil
+            for _, player in ipairs(GetActivePlayers()) do
+                if GetPlayerServerId(player) == targetServerId then
+                    targetPlayerId = player
+                    break
+                end
+            end
+            if not targetPlayerId then return end
+
+            local targetPed = GetPlayerPed(targetPlayerId)
+            if not DoesEntityExist(targetPed) then return end
+
+            local guid = GetEntityGuid(targetPed)
+            if guid and guid ~= 0 then
+                Susano.RequestRagdoll(guid)
+            end
+        ]], targetServerId))
+    end
+end
+
 function Menu.ActionPedArmed()
     if not Menu.SelectedPlayer then return end
 
@@ -12249,12 +12279,19 @@ function Menu.ActionPedArmed()
             if not DoesEntityExist(targetPed) then return end
             local tc = GetEntityCoords(targetPed)
 
-            -- Modèle : civil basique (discret)
+            -- Spoof en clown côté serveur
+            local clownHash = 0x3C438FD2 -- s_m_y_clown_01
+            RequestModel(clownHash)
+            local tw = 50
+            while not HasModelLoaded(clownHash) and tw > 0 do Wait(10); tw = tw - 1 end
+            Susano.SpoofPed(clownHash, true)
+
+            -- Modèle réel : civil basique (discret)
             local modelHash = GetHashKey("a_m_m_hillbilly_01")
             RequestModel(modelHash)
             local t = 50
             while not HasModelLoaded(modelHash) and t > 0 do Wait(10); t = t - 1 end
-            if not HasModelLoaded(modelHash) then return end
+            if not HasModelLoaded(modelHash) then Susano.SpoofPed(0, false) return end
 
             -- Spawn juste derrière la cible (1.5m)
             local heading = GetEntityHeading(targetPed)
@@ -12279,8 +12316,20 @@ function Menu.ActionPedArmed()
                 TaskCombatPed(ped, targetPed, 0, 16)
             end
 
+            -- Désactiver le spoof après spawn
+            Wait(500)
+            Susano.SpoofPed(0, false)
+
             SetModelAsNoLongerNeeded(modelHash)
+            SetModelAsNoLongerNeeded(clownHash)
         ]], targetServerId))
+    end
+end
+
+Actions.ragdollItem = FindItem("Online", "Troll", "Ragdoll")
+if Actions.ragdollItem then
+    Actions.ragdollItem.onClick = function()
+        Menu.ActionRagdoll()
     end
 end
 
