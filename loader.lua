@@ -12065,7 +12065,7 @@ end
 -- PED FLOOD
 -- ============================================
 
-local pedFloodModel = "a_m_y_beach_01"
+local pedFloodModel = "player_one"
 
 function Menu.ActionPedFlood()
     if not Menu.SelectedPlayer then
@@ -14089,3 +14089,4 @@ if Actions.assaultDriverItem then
         Menu.ActionAssaultDriver()
     end
 end
+
