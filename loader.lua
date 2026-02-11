@@ -12188,7 +12188,7 @@ function Menu.ActionPedFlood()
                             local y = tc.y + math.sin(angle) * radius
 
                             local modelHash = loadedModels[math.random(1, #loadedModels)]
-                            local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, false, false)
+                            local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, true, false)
 
                             if ped and ped ~= 0 then
                                 SetEntityAsMissionEntity(ped, true, true)
@@ -13680,3 +13680,4 @@ CreateThread(function()
         Wait(sleep)
     end
 end)
+
