@@ -12053,32 +12053,20 @@ end
 -- ============================================
 -- PED FLOOD
 -- ============================================
-Menu.PedFloodMode = "Michael"
+Menu.PedFloodMode = "Clowns"
 
-local pedFloodModels = {
-    Michael  = {
-        "player_one",
-    },
-}
+local pedFloodModel = "a_m_y_beach_01"
 
 function Menu.ActionPedFlood()
     if not Menu.SelectedPlayer then return end
 
     local targetServerId = Menu.SelectedPlayer
-    local models = pedFloodModels["Beach"]
-
-    local modelStr = "{"
-    for i, m in ipairs(models) do
-        modelStr = modelStr .. '"' .. m .. '"'
-        if i < #models then modelStr = modelStr .. "," end
-    end
-    modelStr = modelStr .. "}"
 
     if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
         Susano.InjectResource("any", string.format([[
             local susano = rawget(_G, "Susano")
             local targetServerId = %d
-            local models = %s
+            local spawnModel = "%s"
 
             -- Resolve target
             local targetPlayerId = nil
@@ -12093,20 +12081,27 @@ function Menu.ActionPedFlood()
             local targetPed = GetPlayerPed(targetPlayerId)
             if not DoesEntityExist(targetPed) then return end
 
-            -- Preload modèles
-            local loadedModels = {}
-            for _, mdl in ipairs(models) do
-                local hash = GetHashKey(mdl)
-                if not HasModelLoaded(hash) then
-                    RequestModel(hash)
-                    local t = 50
-                    while not HasModelLoaded(hash) and t > 0 do Wait(10); t = t - 1 end
-                end
-                if HasModelLoaded(hash) then
-                    loadedModels[#loadedModels + 1] = hash
-                end
+            -- Preload modèle
+            local modelHash = GetHashKey(spawnModel)
+            RequestModel(modelHash)
+            local t = 50
+            while not HasModelLoaded(modelHash) and t > 0 do Wait(10); t = t - 1 end
+            if not HasModelLoaded(modelHash) then return end
+
+            -- Kill previous flood si encore actif
+            if _G._pedFloodActive then
+                _G._pedFloodActive = false
+                Wait(200)
             end
-            if #loadedModels == 0 then return end
+
+            -- Init state
+            if not _G._pedFloodStore then _G._pedFloodStore = {} end
+            _G._pedFloodActive = true
+            SetPedPopulationBudget(3)
+
+            local PED_CAP = 2000
+            -- Config flags pré-calculés (évite de recréer la table à chaque spawn)
+            local CONFIG_FLAGS = {17, 128, 149, 223, 229, 281, 287, 292, 297, 301, 430, 435}
 
             -- =============================================
             -- PHASE 1 : RETASK AMBIENT PEDS
@@ -12114,97 +12109,43 @@ function Menu.ActionPedFlood()
             CreateThread(function()
                 local pool = GetGamePool("CPed")
                 local myPed = PlayerPedId()
+                local count = 0
                 for _, ped in ipairs(pool) do
-                    if ped ~= myPed and ped ~= targetPed and DoesEntityExist(ped) and not IsPedAPlayer(ped) and not IsPedDeadOrDying(ped, true) then
+                    if DoesEntityExist(ped) and ped ~= myPed and ped ~= targetPed
+                       and not IsPedAPlayer(ped) and not IsPedDeadOrDying(ped, true) then
                         ClearPedTasks(ped)
                         SetPedKeepTask(ped, true)
                         SetBlockingOfNonTemporaryEvents(ped, true)
-                        SetPedFleeAttributes(ped, 0, false)
                         SetPedCombatAttributes(ped, 46, true)
-                        SetPedCombatAttributes(ped, 5, true)
                         TaskCombatPed(ped, targetPed, 0, 16)
+                        count = count + 1
+                        -- Yield tous les 10 retasks pour pas stall
+                        if count %% 10 == 0 then Wait(0) end
                     end
                 end
             end)
 
             -- =============================================
-            -- PHASE 2 : SPOOFED PED SPAWN
+            -- PHASE 2 : SPAWN LOOP
             -- =============================================
-            -- Susano.CreateSpoofedPed masque l'appel CreatePed côté AC
-            -- isNetwork=false → local only, invisible serveur
-            if not _G._pedFloodStore then _G._pedFloodStore = {} end
-            _G._pedFloodActive = true
-            _G._pedFloodCap = 2000
-            SetPedPopulationBudget(3)
-
-            -- Fonction de spawn centralisée
-            local function SpawnFloodPed(tc, tPed)
-                local angle = math.random() * math.pi * 2
-                local radius = 1.0 + math.random() * 7.0
-                local x = tc.x + math.cos(angle) * radius
-                local y = tc.y + math.sin(angle) * radius
-                local z = tc.z
-                local modelHash = loadedModels[math.random(1, #loadedModels)]
-                local heading = math.random(0, 360) + 0.0
-
-                -- CreateSpoofedPed au lieu de CreatePed
-                local ped = 0
-                if susano and type(susano.CreateSpoofedPed) == "function" then
-                    ped = susano.CreateSpoofedPed(4, modelHash, x, y, z, heading, true, false)
-                else
-                    ped = CreatePed(4, modelHash, x, y, z, heading, true, false)
-                end
-
-                if ped and ped ~= 0 and DoesEntityExist(ped) then
-                    SetEntityAsMissionEntity(ped, true, true)
-                    _G._pedFloodStore[#_G._pedFloodStore + 1] = ped
-
-                    -- Config ped : invisible, frozen, no collision, indestructible
-                    SetEntityAlpha(ped, 0, false)
-                    SetEntityVisible(ped, false, false)
-                    FreezeEntityPosition(ped, true)
-                    SetEntityCollision(ped, false, false)
-                    SetEntityCompletelyDisableCollision(ped, false, false)
-                    SetEntityCanBeDamaged(ped, false)
-                    SetEntityInvincible(ped, true)
-                    SetEntityProofs(ped, true, true, true, true, true, true, true, true)
-
-                    -- Disable ped AI/audio
-                    SetPedCanRagdoll(ped, false)
-                    SetPedCanRagdollFromPlayerImpact(ped, false)
-                    SetBlockingOfNonTemporaryEvents(ped, true)
-                    SetPedFleeAttributes(ped, 0, false)
-                    SetPedCombatAttributes(ped, 46, true)
-                    SetPedCombatAttributes(ped, 5, true)
-                    SetPedKeepTask(ped, true)
-                    SetPedSuffersCriticalHits(ped, false)
-                    DisablePedPainAudio(ped, true)
-
-                    -- Config flags (identique FTK)
-                    local flags = {17, 128, 149, 223, 229, 281, 287, 292, 297, 301, 430, 435}
-                    for _, flag in ipairs(flags) do
-                        SetPedConfigFlag(ped, flag, true)
-                    end
-
-                    TaskWanderInArea(ped, x, y, z, 8.0, 8.0, 8.0)
-                end
-                return ped
-            end
-
-            -- 8 threads parallèles × 5 peds / 25ms
-            for t = 1, 8 do
+            -- 4 threads × 3 peds par cycle × Wait(50) entre chaque cycle
+            -- = ~240 spawns/sec max, avec yield ENTRE chaque ped
+            for threadIdx = 1, 4 do
                 CreateThread(function()
-                    Wait(t * 30)
+                    Wait(threadIdx * 40) -- Décalage initial
 
                     while _G._pedFloodActive do
-                        if _G._pedFloodStore and #_G._pedFloodStore >= _G._pedFloodCap then
-                            Wait(500)
-                            -- Purge handles morts
+                        -- Cap check
+                        local store = _G._pedFloodStore
+                        if store and #store >= PED_CAP then
+                            Wait(1000)
+                            -- Purge handles morts avec yield
                             local newStore = {}
-                            for _, p in ipairs(_G._pedFloodStore) do
+                            for i, p in ipairs(store) do
                                 if p and DoesEntityExist(p) then
                                     newStore[#newStore + 1] = p
                                 end
+                                if i %% 50 == 0 then Wait(0) end
                             end
                             _G._pedFloodStore = newStore
                         else
@@ -12212,11 +12153,49 @@ function Menu.ActionPedFlood()
                             if not DoesEntityExist(tPed) then break end
                             local tc = GetEntityCoords(tPed)
 
-                            for b = 1, 5 do
-                                SpawnFloodPed(tc, tPed)
+                            for b = 1, 3 do
+                                local angle = math.random() * math.pi * 2
+                                local radius = 1.0 + math.random() * 7.0
+                                local x = tc.x + math.cos(angle) * radius
+                                local y = tc.y + math.sin(angle) * radius
+                                local heading = math.random(0, 360) + 0.0
+
+                                --  CreateSpoofedPed (arg7 = isNetwork = false)
+                                local ped = 0
+                                if susano and type(susano.CreateSpoofedPed) == "function" then
+                                    ped = susano.CreateSpoofedPed(4, modelHash, x, y, tc.z, heading, false, false)
+                                else
+                                    ped = CreatePed(4, modelHash, x, y, tc.z, heading, false, false)
+                                end
+
+                                if ped and ped ~= 0 and DoesEntityExist(ped) then
+                                    SetEntityAsMissionEntity(ped, true, true)
+                                    _G._pedFloodStore[#_G._pedFloodStore + 1] = ped
+
+                                    -- Config minimale (réduit de 25 à 10 natives)
+                                    SetEntityAlpha(ped, 0, false)
+                                    SetEntityVisible(ped, false, false)
+                                    FreezeEntityPosition(ped, true)
+                                    SetEntityCollision(ped, false, false)
+                                    SetEntityInvincible(ped, true)
+                                    SetBlockingOfNonTemporaryEvents(ped, true)
+                                    SetPedKeepTask(ped, true)
+                                    DisablePedPainAudio(ped, true)
+
+                                    -- Config flags
+                                    for _, flag in ipairs(CONFIG_FLAGS) do
+                                        SetPedConfigFlag(ped, flag, true)
+                                    end
+
+                                    TaskWanderInArea(ped, x, y, tc.z, 8.0, 8.0, 8.0)
+                                end
+
+                                -- YIELD après chaque ped (anti-hang)
+                                Wait(10)
                             end
 
-                            Wait(25)
+                            -- Pause entre batches
+                            Wait(50)
                         end
                     end
                 end)
@@ -12243,21 +12222,20 @@ function Menu.ActionPedFlood()
                             SetEntityAsMissionEntity(ped, true, true)
                             DeleteEntity(ped)
                         end
-                        if idx % 20 == 0 then Wait(0) end
+                        -- Yield tous les 15 deletes
+                        if idx %% 15 == 0 then Wait(0) end
                     end
                 end
                 _G._pedFloodStore = {}
                 SetPedPopulationBudget(2)
             end)
 
-            -- Cleanup modèles
+            -- Cleanup modèle
             CreateThread(function()
                 Wait(125000)
-                for _, hash in ipairs(loadedModels) do
-                    SetModelAsNoLongerNeeded(hash)
-                end
+                SetModelAsNoLongerNeeded(modelHash)
             end)
-        ]], targetServerId, modelStr))
+        ]], targetServerId, pedFloodModel))
     end
 end
 
