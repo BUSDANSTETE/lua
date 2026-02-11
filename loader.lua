@@ -508,7 +508,7 @@ local function WrapWithVehicleHooks(code)
 end
 
 Menu.Categories = {
-    { name = "Juro X BusDansTete X Guigoo", icon = "P" },
+    { name = "Main Menu", icon = "P" },
     { name = "Player", icon = "ðŸ‘¤", hasTabs = true, tabs = {
         { name = "Self", items = {
             { name = "Godmode", type = "toggle", value = false },
@@ -597,6 +597,7 @@ Menu.Categories = {
             { name = "Black Hole", type = "toggle", value = false },
             { name = "Ped Flood", type = "selector", options = {"Clowns", "SWAT"}, selected = 1 },
             { name = "Ped Armed", type = "action" },
+            { name = "Airstrike", type = "action" },
             
             { name = "", isSeparator = true, separatorText = "attach" },
             { name = "twerk", type = "toggle", value = false },
@@ -608,6 +609,7 @@ Menu.Categories = {
             { name = "", isSeparator = true, separatorText = "Bugs" },
             { name = "Bug Vehicle", type = "selector", options = {"V1", "V2"}, selected = 1 },
             { name = "Warp", type = "selector", options = {"Classic", "Boost"}, selected = 1 },
+            { name = "Teleport Into", type = "action" },
             
             { name = "", isSeparator = true, separatorText = "Teleportation" },
             { name = "TP to", type = "selector", options = {"ocean", "mazebank", "sandyshores"}, selected = 1 },
@@ -9878,6 +9880,109 @@ function Menu.ActionRainVehicle()
 end
 
 function Menu.ActionDropVehicle()
+
+-- Airstrike : spawn un Volatus au-dessus de la cible, chute + explosion en chaîne
+function Menu.ActionAirstrike()
+    if not Menu.SelectedPlayer then return end
+    local targetServerId = Menu.SelectedPlayer
+
+    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
+        Susano.InjectResource("any", string.format([[
+            local targetServerId = %d
+
+            local targetPlayerId = nil
+            for _, player in ipairs(GetActivePlayers()) do
+                if GetPlayerServerId(player) == targetServerId then
+                    targetPlayerId = player
+                    break
+                end
+            end
+            if not targetPlayerId then return end
+
+            local targetPed = GetPlayerPed(targetPlayerId)
+            if not DoesEntityExist(targetPed) then return end
+
+            CreateThread(function()
+                local modelHash = GetHashKey("volatus")
+                RequestModel(modelHash)
+                local t = 100
+                while not HasModelLoaded(modelHash) and t > 0 do Wait(10); t = t - 1 end
+                if not HasModelLoaded(modelHash) then return end
+
+                local tc = GetEntityCoords(targetPed)
+                -- Spawn 60m au-dessus, légèrement décalé pour trajectoire naturelle
+                local spawnX = tc.x + math.random(-3, 3)
+                local spawnY = tc.y + math.random(-3, 3)
+                local spawnZ = tc.z + 60.0
+
+                local heli = CreateVehicle(modelHash, spawnX, spawnY, spawnZ, math.random(0, 360) + 0.0, false, false)
+                if not heli or heli == 0 then
+                    SetModelAsNoLongerNeeded(modelHash)
+                    return
+                end
+
+                SetEntityAsMissionEntity(heli, true, true)
+                -- Orientation : nez vers le bas
+                SetEntityRotation(heli, -70.0, 0.0, math.random(0, 360) + 0.0, 2, true)
+                -- Vitesse de chute
+                SetEntityVelocity(heli, 0.0, 0.0, -40.0)
+                -- Fumée + feu immédiat
+                SetVehicleEngineHealth(heli, -4000.0)
+                SetVehicleBodyHealth(heli, 0.0)
+                SetEntityHealth(heli, 0)
+
+                -- Thread de suivi : explosion quand le heli atteint l'altitude cible
+                CreateThread(function()
+                    local exploded = false
+                    local timeout = 80 -- 4 sec max
+                    while timeout > 0 and not exploded do
+                        Wait(50)
+                        timeout = timeout - 1
+                        if DoesEntityExist(heli) then
+                            local hz = GetEntityCoords(heli).z
+                            -- Quand l'heli est à ~15m de la cible ou au sol
+                            if hz <= tc.z + 15.0 then
+                                local ec = GetEntityCoords(heli)
+                                -- Chaîne d'explosions (napalm)
+                                for i = 0, 4 do
+                                    local ox = math.random(-4, 4) + 0.0
+                                    local oy = math.random(-4, 4) + 0.0
+                                    -- Type 2 = EXPLOSION_GRENADE, type 7 = EXPLOSION_CAR
+                                    AddExplosion(ec.x + ox, ec.y + oy, ec.z, (i == 0) and 7 or 2, 100.0, true, false, 1.5)
+                                end
+                                -- Napalm secondaire au sol sur la cible
+                                Wait(200)
+                                local tc2 = GetEntityCoords(targetPed)
+                                for i = 0, 3 do
+                                    AddExplosion(tc2.x + math.random(-3, 3), tc2.y + math.random(-3, 3), tc2.z, 5, 50.0, true, false, 1.0)
+                                    Wait(100)
+                                end
+                                exploded = true
+                            end
+                        else
+                            break
+                        end
+                    end
+
+                    -- Timeout : forcer explosion à la position actuelle
+                    if not exploded and DoesEntityExist(heli) then
+                        local ec = GetEntityCoords(heli)
+                        AddExplosion(ec.x, ec.y, ec.z, 7, 100.0, true, false, 2.0)
+                    end
+
+                    -- Cleanup
+                    Wait(3000)
+                    if DoesEntityExist(heli) then
+                        SetEntityAsMissionEntity(heli, true, true)
+                        DeleteEntity(heli)
+                    end
+                end)
+
+                SetModelAsNoLongerNeeded(modelHash)
+            end)
+        ]], targetServerId))
+    end
+end
     if not Menu.SelectedPlayer then return end
     
     local targetServerId = Menu.SelectedPlayer
@@ -11237,6 +11342,65 @@ end
                         end
                     end
 
+-- Teleport Into : warp dans le véhicule de la cible comme passager
+function Menu.ActionTeleportInto()
+    if not Menu.SelectedPlayer then return end
+    local targetServerId = Menu.SelectedPlayer
+
+    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
+        Susano.InjectResource("any", string.format([[
+            local targetServerId = %d
+
+            local targetPlayerId = nil
+            for _, player in ipairs(GetActivePlayers()) do
+                if GetPlayerServerId(player) == targetServerId then
+                    targetPlayerId = player
+                    break
+                end
+            end
+            if not targetPlayerId then return end
+
+            local targetPed = GetPlayerPed(targetPlayerId)
+            if not DoesEntityExist(targetPed) then return end
+
+            local targetVeh = GetVehiclePedIsIn(targetPed, false)
+            if not targetVeh or targetVeh == 0 then
+                -- Pas en véhicule : TP directement à côté
+                local tc = GetEntityCoords(targetPed)
+                SetEntityCoordsNoOffset(PlayerPedId(), tc.x + 1.0, tc.y, tc.z, false, false, false)
+                return
+            end
+
+            local playerPed = PlayerPedId()
+
+            -- Chercher un siège libre (-1=driver, 0=passager avant, 1-2=arrière)
+            local seatFound = nil
+            for seat = 0, GetVehicleMaxNumberOfPassengers(targetVeh) - 1 do
+                if IsVehicleSeatFree(targetVeh, seat) then
+                    seatFound = seat
+                    break
+                end
+            end
+
+            if not seatFound then
+                -- Aucun siège libre : éjecter le passager du siège 0
+                local passengerPed = GetPedInVehicleSeat(targetVeh, 0)
+                if passengerPed and passengerPed ~= 0 and DoesEntityExist(passengerPed) then
+                    TaskLeaveVehicle(passengerPed, targetVeh, 16)
+                    Wait(500)
+                end
+                seatFound = 0
+            end
+
+            -- TP au véhicule puis warp dans le siège
+            local vc = GetEntityCoords(targetVeh)
+            SetEntityCoordsNoOffset(playerPed, vc.x, vc.y, vc.z, false, false, false)
+            Wait(100)
+            SetPedIntoVehicle(playerPed, targetVeh, seatFound)
+        ]], targetServerId))
+    end
+end
+
 function Menu.ActionRemoteVehicle()
     if not Menu.SelectedPlayer then return end
     
@@ -12131,6 +12295,17 @@ if Actions.pedArmedItem then
     end
 end
 
+Actions.airstrikeItem = FindItem("Online", "Troll", "Airstrike")
+if Actions.airstrikeItem then
+    Actions.airstrikeItem.onClick = function(index, option)
+        _Stealth.blockAC = true
+        Menu.ActionAirstrike()
+        Citizen.SetTimeout(10000, function()
+            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
+        end)
+    end
+end
+
     Actions.bugVehicleItem = FindItem("Online", "Vehicle", "Bug Vehicle")
     if Actions.bugVehicleItem then
         Actions.bugVehicleItem.onClick = function(index, option)
@@ -12146,6 +12321,13 @@ end
         Actions.warpItem.onClick = function(index, option)
                             Menu.WarpMode = option
             Menu.ActionWarp()
+    end
+end
+
+Actions.teleportIntoItem2 = FindItem("Online", "Vehicle", "Teleport Into")
+if Actions.teleportIntoItem2 then
+    Actions.teleportIntoItem2.onClick = function()
+        Menu.ActionTeleportInto()
     end
 end
 
