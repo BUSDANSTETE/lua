@@ -12053,190 +12053,236 @@ end
 -- ============================================
 -- PED FLOOD
 -- ============================================
-Menu.PedFloodMode = "Clowns"
 
 local pedFloodModel = "a_m_y_beach_01"
 
 function Menu.ActionPedFlood()
-    if not Menu.SelectedPlayer then return end
+    if not Menu.SelectedPlayer then
+        print("[PedFlood] ERROR: No player selected")
+        return
+    end
 
     local targetServerId = Menu.SelectedPlayer
+    print("[PedFlood] Starting - target server ID: " .. tostring(targetServerId))
 
-    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
-        Susano.InjectResource("any", string.format([[
-            local susano = rawget(_G, "Susano")
-            local targetServerId = %d
-            local spawnModel = "%s"
-
-            -- Resolve target
-            local targetPlayerId = nil
-            for _, player in ipairs(GetActivePlayers()) do
-                if GetPlayerServerId(player) == targetServerId then
-                    targetPlayerId = player
-                    break
-                end
-            end
-            if not targetPlayerId then return end
-
-            local targetPed = GetPlayerPed(targetPlayerId)
-            if not DoesEntityExist(targetPed) then return end
-
-            -- Preload modèle
-            local modelHash = GetHashKey(spawnModel)
-            RequestModel(modelHash)
-            local t = 50
-            while not HasModelLoaded(modelHash) and t > 0 do Wait(10); t = t - 1 end
-            if not HasModelLoaded(modelHash) then return end
-
-            -- Kill previous flood si encore actif
-            if _G._pedFloodActive then
-                _G._pedFloodActive = false
-                Wait(200)
-            end
-
-            -- Init state
-            if not _G._pedFloodStore then _G._pedFloodStore = {} end
-            _G._pedFloodActive = true
-            SetPedPopulationBudget(3)
-
-            local PED_CAP = 2000
-            -- Config flags pré-calculés (évite de recréer la table à chaque spawn)
-            local CONFIG_FLAGS = {17, 128, 149, 223, 229, 281, 287, 292, 297, 301, 430, 435}
-
-            -- =============================================
-            -- PHASE 1 : RETASK AMBIENT PEDS
-            -- =============================================
-            CreateThread(function()
-                local pool = GetGamePool("CPed")
-                local myPed = PlayerPedId()
-                local count = 0
-                for _, ped in ipairs(pool) do
-                    if DoesEntityExist(ped) and ped ~= myPed and ped ~= targetPed
-                       and not IsPedAPlayer(ped) and not IsPedDeadOrDying(ped, true) then
-                        ClearPedTasks(ped)
-                        SetPedKeepTask(ped, true)
-                        SetBlockingOfNonTemporaryEvents(ped, true)
-                        SetPedCombatAttributes(ped, 46, true)
-                        TaskCombatPed(ped, targetPed, 0, 16)
-                        count = count + 1
-                        -- Yield tous les 10 retasks pour pas stall
-                        if count %% 10 == 0 then Wait(0) end
-                    end
-                end
-            end)
-
-            -- =============================================
-            -- PHASE 2 : SPAWN LOOP
-            -- =============================================
-            -- 4 threads × 3 peds par cycle × Wait(50) entre chaque cycle
-            -- = ~240 spawns/sec max, avec yield ENTRE chaque ped
-            for threadIdx = 1, 4 do
-                CreateThread(function()
-                    Wait(threadIdx * 40) -- Décalage initial
-
-                    while _G._pedFloodActive do
-                        -- Cap check
-                        local store = _G._pedFloodStore
-                        if store and #store >= PED_CAP then
-                            Wait(1000)
-                            -- Purge handles morts avec yield
-                            local newStore = {}
-                            for i, p in ipairs(store) do
-                                if p and DoesEntityExist(p) then
-                                    newStore[#newStore + 1] = p
-                                end
-                                if i %% 50 == 0 then Wait(0) end
-                            end
-                            _G._pedFloodStore = newStore
-                        else
-                            local tPed = GetPlayerPed(targetPlayerId)
-                            if not DoesEntityExist(tPed) then break end
-                            local tc = GetEntityCoords(tPed)
-
-                            for b = 1, 3 do
-                                local angle = math.random() * math.pi * 2
-                                local radius = 1.0 + math.random() * 7.0
-                                local x = tc.x + math.cos(angle) * radius
-                                local y = tc.y + math.sin(angle) * radius
-                                local heading = math.random(0, 360) + 0.0
-
-                                --  CreateSpoofedPed (arg7 = isNetwork = false)
-                                local ped = 0
-                                if susano and type(susano.CreateSpoofedPed) == "function" then
-                                    ped = susano.CreateSpoofedPed(4, modelHash, x, y, tc.z, heading, false, false)
-                                else
-                                    ped = CreatePed(4, modelHash, x, y, tc.z, heading, false, false)
-                                end
-
-                                if ped and ped ~= 0 and DoesEntityExist(ped) then
-                                    SetEntityAsMissionEntity(ped, true, true)
-                                    _G._pedFloodStore[#_G._pedFloodStore + 1] = ped
-
-                                    -- Config minimale (réduit de 25 à 10 natives)
-                                    SetEntityAlpha(ped, 0, false)
-                                    SetEntityVisible(ped, false, false)
-                                    FreezeEntityPosition(ped, true)
-                                    SetEntityCollision(ped, false, false)
-                                    SetEntityInvincible(ped, true)
-                                    SetBlockingOfNonTemporaryEvents(ped, true)
-                                    SetPedKeepTask(ped, true)
-                                    DisablePedPainAudio(ped, true)
-
-                                    -- Config flags
-                                    for _, flag in ipairs(CONFIG_FLAGS) do
-                                        SetPedConfigFlag(ped, flag, true)
-                                    end
-
-                                    TaskWanderInArea(ped, x, y, tc.z, 8.0, 8.0, 8.0)
-                                end
-
-                                -- YIELD après chaque ped (anti-hang)
-                                Wait(10)
-                            end
-
-                            -- Pause entre batches
-                            Wait(50)
-                        end
-                    end
-                end)
-            end
-
-            -- Auto-stop après 120s
-            CreateThread(function()
-                Wait(120000)
-                _G._pedFloodActive = false
-            end)
-
-            -- =============================================
-            -- PHASE 3 : CLEANUP AUTO
-            -- =============================================
-            CreateThread(function()
-                while _G._pedFloodActive do Wait(1000) end
-                Wait(10000)
-
-                local store = _G._pedFloodStore
-                if store then
-                    for idx = 1, #store do
-                        local ped = store[idx]
-                        if ped and DoesEntityExist(ped) then
-                            SetEntityAsMissionEntity(ped, true, true)
-                            DeleteEntity(ped)
-                        end
-                        -- Yield tous les 15 deletes
-                        if idx %% 15 == 0 then Wait(0) end
-                    end
-                end
-                _G._pedFloodStore = {}
-                SetPedPopulationBudget(2)
-            end)
-
-            -- Cleanup modèle
-            CreateThread(function()
-                Wait(125000)
-                SetModelAsNoLongerNeeded(modelHash)
-            end)
-        ]], targetServerId, pedFloodModel))
+    if type(Susano) ~= "table" or type(Susano.InjectResource) ~= "function" then
+        print("[PedFlood] ERROR: Susano.InjectResource not available")
+        return
     end
+
+    print("[PedFlood] Injecting into resource...")
+
+    Susano.InjectResource("any", string.format([[
+        print("[PedFlood:Inject] Code injected, starting...")
+
+        local susano = rawget(_G, "Susano")
+        print("[PedFlood:Inject] Susano ref: " .. tostring(susano))
+        if susano then
+            print("[PedFlood:Inject] CreateSpoofedPed: " .. tostring(susano.CreateSpoofedPed))
+        end
+
+        local targetServerId = %d
+        local spawnModel = "%s"
+
+        -- Resolve target
+        local targetPlayerId = nil
+        for _, player in ipairs(GetActivePlayers()) do
+            if GetPlayerServerId(player) == targetServerId then
+                targetPlayerId = player
+                break
+            end
+        end
+        if not targetPlayerId then
+            print("[PedFlood:Inject] ERROR: Target player not found")
+            return
+        end
+
+        local targetPed = GetPlayerPed(targetPlayerId)
+        if not DoesEntityExist(targetPed) then
+            print("[PedFlood:Inject] ERROR: Target ped doesn't exist")
+            return
+        end
+        print("[PedFlood:Inject] Target resolved: player=" .. tostring(targetPlayerId) .. " ped=" .. tostring(targetPed))
+
+        -- Load model
+        local modelHash = GetHashKey(spawnModel)
+        print("[PedFlood:Inject] Model hash: " .. tostring(modelHash))
+        RequestModel(modelHash)
+        local t = 50
+        while not HasModelLoaded(modelHash) and t > 0 do Wait(10); t = t - 1 end
+
+        if not HasModelLoaded(modelHash) then
+            print("[PedFlood:Inject] ERROR: Model failed to load after 500ms")
+            return
+        end
+        print("[PedFlood:Inject] Model loaded OK")
+
+        -- Kill previous flood
+        if _G._pedFloodActive then
+            print("[PedFlood:Inject] Killing previous flood...")
+            _G._pedFloodActive = false
+            Wait(300)
+        end
+
+        -- Init state
+        _G._pedFloodStore = {}
+        _G._pedFloodActive = true
+        SetPedPopulationBudget(3)
+
+        local PED_CAP = 2000
+        local totalSpawned = 0
+        local totalFailed = 0
+
+        -- =============================================
+        -- PHASE 1 : RETASK AMBIENT PEDS
+        -- =============================================
+        CreateThread(function()
+            local pool = GetGamePool("CPed")
+            local myPed = PlayerPedId()
+            local retasked = 0
+            for i, ped in ipairs(pool) do
+                if DoesEntityExist(ped) and ped ~= myPed and ped ~= targetPed
+                   and not IsPedAPlayer(ped) and not IsPedDeadOrDying(ped, true) then
+                    ClearPedTasks(ped)
+                    SetPedKeepTask(ped, true)
+                    SetBlockingOfNonTemporaryEvents(ped, true)
+                    SetPedCombatAttributes(ped, 46, true)
+                    TaskCombatPed(ped, targetPed, 0, 16)
+                    retasked = retasked + 1
+                    if retasked %% 10 == 0 then Wait(0) end
+                end
+            end
+            print("[PedFlood:Phase1] Retasked " .. retasked .. " ambient peds")
+        end)
+
+        -- =============================================
+        -- PHASE 2 : SPAWN LOOP
+        -- =============================================
+        print("[PedFlood:Phase2] Starting 4 spawn threads...")
+
+        for threadIdx = 1, 4 do
+            CreateThread(function()
+                Wait(threadIdx * 50)
+                print("[PedFlood:Thread" .. threadIdx .. "] Started")
+
+                while _G._pedFloodActive do
+                    local store = _G._pedFloodStore
+                    if store and #store >= PED_CAP then
+                        Wait(1000)
+                        -- Purge dead handles
+                        local newStore = {}
+                        for i, p in ipairs(store) do
+                            if p and DoesEntityExist(p) then
+                                newStore[#newStore + 1] = p
+                            end
+                            if i %% 50 == 0 then Wait(0) end
+                        end
+                        _G._pedFloodStore = newStore
+                        print("[PedFlood:Thread" .. threadIdx .. "] Purged, now " .. #newStore .. " alive")
+                    else
+                        local tPed = GetPlayerPed(targetPlayerId)
+                        if not DoesEntityExist(tPed) then
+                            print("[PedFlood:Thread" .. threadIdx .. "] Target gone, stopping")
+                            break
+                        end
+                        local tc = GetEntityCoords(tPed)
+
+                        for b = 1, 3 do
+                            local angle = math.random() * math.pi * 2
+                            local radius = 1.0 + math.random() * 7.0
+                            local x = tc.x + math.cos(angle) * radius
+                            local y = tc.y + math.sin(angle) * radius
+
+                            -- Ground Z check : évite spawn sous la map
+                            local foundGround, groundZ = GetGroundZFor_3dCoord(x, y, tc.z + 5.0, false)
+                            local z = foundGround and groundZ or tc.z
+
+                            local heading = math.random(0, 360) + 0.0
+
+                            -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                            -- SPAWN : arg7 = isNetwork = false (local only)
+                            -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                            local ped = 0
+                            if susano and type(susano.CreateSpoofedPed) == "function" then
+                                ped = susano.CreateSpoofedPed(4, modelHash, x, y, z, heading, false, false)
+                            else
+                                ped = CreatePed(4, modelHash, x, y, z, heading, false, false)
+                            end
+
+                            if ped and ped ~= 0 and DoesEntityExist(ped) then
+                                SetEntityAsMissionEntity(ped, true, true)
+                                _G._pedFloodStore[#_G._pedFloodStore + 1] = ped
+
+                                SetEntityAlpha(ped, 0, false)
+                                SetEntityVisible(ped, false, false)
+                                FreezeEntityPosition(ped, true)
+                                SetEntityCollision(ped, false, false)
+                                SetEntityInvincible(ped, true)
+                                SetBlockingOfNonTemporaryEvents(ped, true)
+                                SetPedKeepTask(ped, true)
+                                DisablePedPainAudio(ped, true)
+
+                                local flags = {17, 128, 149, 223, 229, 281, 287, 292, 297, 301, 430, 435}
+                                for _, flag in ipairs(flags) do
+                                    SetPedConfigFlag(ped, flag, true)
+                                end
+
+                                TaskWanderInArea(ped, x, y, z, 8.0, 8.0, 8.0)
+                                totalSpawned = totalSpawned + 1
+                            else
+                                totalFailed = totalFailed + 1
+                            end
+
+                            -- Yield après chaque ped (anti script-hang)
+                            Wait(10)
+                        end
+
+                        Wait(50)
+                    end
+                end
+
+                print("[PedFlood:Thread" .. threadIdx .. "] Stopped. Spawned=" .. totalSpawned .. " Failed=" .. totalFailed)
+            end)
+        end
+
+        -- Auto-stop 120s
+        CreateThread(function()
+            Wait(120000)
+            _G._pedFloodActive = false
+            print("[PedFlood] Auto-stop triggered. Total in store: " .. tostring(_G._pedFloodStore and #_G._pedFloodStore or 0))
+        end)
+
+        -- =============================================
+        -- PHASE 3 : CLEANUP AUTO
+        -- =============================================
+        CreateThread(function()
+            while _G._pedFloodActive do Wait(1000) end
+            print("[PedFlood:Cleanup] Waiting 10s grace period...")
+            Wait(10000)
+
+            local store = _G._pedFloodStore
+            local deleted = 0
+            if store then
+                for idx = 1, #store do
+                    local ped = store[idx]
+                    if ped and DoesEntityExist(ped) then
+                        SetEntityAsMissionEntity(ped, true, true)
+                        DeleteEntity(ped)
+                        deleted = deleted + 1
+                    end
+                    if idx %% 15 == 0 then Wait(0) end
+                end
+            end
+            _G._pedFloodStore = {}
+            SetPedPopulationBudget(2)
+            SetModelAsNoLongerNeeded(modelHash)
+            print("[PedFlood:Cleanup] Done. Deleted " .. deleted .. " entities")
+        end)
+
+        print("[PedFlood:Inject] All threads launched")
+    ]], targetServerId, pedFloodModel))
+
+    print("[PedFlood] InjectResource call completed")
 end
 
 Actions.pedFloodItem = FindItem("Online", "Troll", "Ped Flood")
