@@ -12213,21 +12213,18 @@ function Menu.ActionPedFlood()
                                 SetEntityAsMissionEntity(ped, true, true)
                                 _G._pedFloodStore[#_G._pedFloodStore + 1] = ped
 
-                                SetEntityAlpha(ped, 0, false)
-                                SetEntityVisible(ped, false, false)
-                                FreezeEntityPosition(ped, true)
-                                SetEntityCollision(ped, false, false)
-                                SetEntityInvincible(ped, true)
+                                -- Config ped : visible, combat, anti-GC
                                 SetBlockingOfNonTemporaryEvents(ped, true)
                                 SetPedKeepTask(ped, true)
+                                SetPedCombatAttributes(ped, 46, true)
+                                SetPedCombatAttributes(ped, 5, true)
+                                SetPedFleeAttributes(ped, 0, false)
+                                SetPedSuffersCriticalHits(ped, false)
+                                SetEntityMaxHealth(ped, 500)
+                                SetEntityHealth(ped, 500)
                                 DisablePedPainAudio(ped, true)
 
-                                local flags = {17, 128, 149, 223, 229, 281, 287, 292, 297, 301, 430, 435}
-                                for _, flag in ipairs(flags) do
-                                    SetPedConfigFlag(ped, flag, true)
-                                end
-
-                                TaskWanderInArea(ped, x, y, z, 8.0, 8.0, 8.0)
+                                TaskCombatPed(ped, tPed, 0, 16)
                                 totalSpawned = totalSpawned + 1
                             else
                                 totalFailed = totalFailed + 1
