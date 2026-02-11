@@ -12215,9 +12215,9 @@ function Menu.ActionPedFlood()
                             -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
                             local ped = 0
                             if susano and type(susano.CreateSpoofedPed) == "function" then
-                                ped = susano.CreateSpoofedPed(4, modelHash, x, y, z, heading, false, false)
+                                ped = susano.CreateSpoofedPed(4, modelHash, x, y, z, heading, true, false)
                             else
-                                ped = CreatePed(4, modelHash, x, y, z, heading, false, false)
+                                ped = CreatePed(4, modelHash, x, y, z, heading, true, false)
                             end
 
                             if ped and ped ~= 0 and DoesEntityExist(ped) then
