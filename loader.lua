@@ -12112,7 +12112,7 @@ function Menu.ActionPedFlood()
                 local hash = GetHashKey(mdl)
                 if not HasModelLoaded(hash) then
                     RequestModel(hash)
-                    local t = 1000
+                    local t = 100
                     while not HasModelLoaded(hash) and t > 0 do Wait(10); t = t - 1 end
                 end
                 if HasModelLoaded(hash) then
@@ -12125,7 +12125,7 @@ function Menu.ActionPedFlood()
             local spoofHash = GetHashKey(spoofModel)
             if not HasModelLoaded(spoofHash) then
                 RequestModel(spoofHash)
-                local t = 1000
+                local t = 100
                 while not HasModelLoaded(spoofHash) and t > 0 do Wait(10); t = t - 1 end
             end
             if susano and type(susano.SpoofPed) == "function" and HasModelLoaded(spoofHash) then
@@ -13680,5 +13680,6 @@ CreateThread(function()
         Wait(sleep)
     end
 end)
+
 
 
