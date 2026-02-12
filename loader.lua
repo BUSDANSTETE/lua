@@ -764,6 +764,7 @@ Menu.Categories = {
             { name = "Give", type = "selector", options = {"Ramp", "Wall", "Wall 2"}, selected = 1 },
             { name = "Rainbow Paint", type = "toggle", value = false },
             { name = "", isSeparator = true, separatorText = "Buggy Ramp" },
+            { name = "Eject Power", type = "selector", options = {"Low", "Medium", "High", "Insane"}, selected = 2 },
             { name = "Attach Ramp", type = "action" },
             { name = "Detach Ramp", type = "action" }
         }},
@@ -13847,14 +13848,46 @@ if Actions.deleteAllGiantProps then
 end
 
 -- ============================================
--- BUGGY RAMP (Dynamic Positioning)
+-- BUGGY RAMP (Force Ejection System)
 -- ============================================
-_G._buggyRampHandle = nil
+-- NOTE: SetEntityScale n'existe pas comme native GTA V/FiveM.
+-- Pour compenser, on spawn 2 rampes côte à côte (largeur doublée)
+-- + système de force qui éjecte les véhicules touchés.
+-- ============================================
+_G._buggyRampHandles = _G._buggyRampHandles or {}
 _G._buggyRampVeh = nil
 _G._buggyRampThread = false
+_G._buggyRampForceThread = false
+_G._buggyRampCooldowns = {} -- anti-spam : 1 force par véhicule
 
 local RAMP_MODEL_PRIMARY  = "prop_mp_ramp_01"
 local RAMP_MODEL_FALLBACK = "lts_prop_lts_ramp_01"
+
+-- Puissance d'éjection par niveau
+local EJECT_POWER = {
+    ["Low"]    = { z = 15.0,  fwd = 8.0  },
+    ["Medium"] = { z = 25.0,  fwd = 15.0 },
+    ["High"]   = { z = 40.0,  fwd = 20.0 },
+    ["Insane"] = { z = 70.0,  fwd = 30.0 },
+}
+Menu.RampEjectPower = Menu.RampEjectPower or "Medium"
+
+-- Helper : load model with fallback
+local function LoadRampModel()
+    local hash = GetHashKey(RAMP_MODEL_PRIMARY)
+    RequestModel(hash)
+    local t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if HasModelLoaded(hash) then return hash, RAMP_MODEL_PRIMARY end
+
+    hash = GetHashKey(RAMP_MODEL_FALLBACK)
+    RequestModel(hash)
+    t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if HasModelLoaded(hash) then return hash, RAMP_MODEL_FALLBACK end
+
+    return nil, nil
+end
 
 function Menu.AttachBuggyRamp()
     Menu.DetachBuggyRamp()
@@ -13866,117 +13899,193 @@ function Menu.AttachBuggyRamp()
         return
     end
 
-    -- Calcul dynamique de la longueur du véhicule
+    local hash, modelName = LoadRampModel()
+    if not hash then
+        print("[BuggyRamp] All models failed to load")
+        return
+    end
+
+    -- Dimensions dynamiques du véhicule
     local vehModel = GetEntityModel(veh)
     local vMin, vMax = GetModelDimensions(vehModel)
-    -- max.y = distance du centre à l'avant du véhicule
-    local frontOffset = vMax.y + 1.0
-    print("[BuggyRamp] Vehicle max.y=" .. string.format("%.2f", vMax.y) .. " → ramp Y offset=" .. string.format("%.2f", frontOffset))
+    local frontY = vMax.y + 1.2  -- 1.2m devant le nez du véhicule
 
-    -- Chargement modèle : primary, puis fallback
-    local model = RAMP_MODEL_PRIMARY
-    local hash = GetHashKey(model)
-    RequestModel(hash)
-    local t = 50
-    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    -- Dimensions de la rampe pour calculer le décalage latéral
+    local rMin, rMax = GetModelDimensions(hash)
+    local rampHalfWidth = rMax.x  -- demi-largeur de la rampe
 
-    if not HasModelLoaded(hash) then
-        print("[BuggyRamp] Primary failed, trying fallback")
-        model = RAMP_MODEL_FALLBACK
-        hash = GetHashKey(model)
-        RequestModel(hash)
-        t = 50
-        while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
-        if not HasModelLoaded(hash) then
-            print("[BuggyRamp] Both models failed")
-            return
+    local vehCoords = GetEntityCoords(veh)
+    local handles = {}
+
+    -- Spawn 2 rampes côte à côte (networked) pour doubler la largeur
+    -- Rampe gauche : X = -rampHalfWidth, Rampe droite : X = +rampHalfWidth
+    for i, offsetX in ipairs({ -rampHalfWidth, rampHalfWidth }) do
+        local obj = CreateObject(hash, vehCoords.x, vehCoords.y, vehCoords.z + 3.0, true, true, false)
+        if obj and obj ~= 0 and DoesEntityExist(obj) then
+            SetEntityAsMissionEntity(obj, true, true)
+
+            -- Y = frontY (dynamique), Z = 0.0 (niveau châssis exact)
+            -- rotZ = 180.0 → face à la route
+            AttachEntityToEntity(
+                obj, veh,
+                0,
+                offsetX, frontY, 0.0,
+                0.0, 0.0, 180.0,
+                false, true, true, false, 0, true
+            )
+
+            SetEntityCollision(obj, true, true)
+            SetEntityNoCollisionEntity(veh, obj, true)
+            SetEntityNoCollisionEntity(obj, veh, true)
+            SetEntityInvincible(obj, true)
+            SetEntityProofs(obj, true, true, true, true, true, true, true, true)
+
+            handles[#handles + 1] = obj
         end
     end
 
-    -- Spawn networked (true) pour que les autres joueurs voient l'effet
-    local vehCoords = GetEntityCoords(veh)
-    local obj = CreateObject(hash, vehCoords.x, vehCoords.y, vehCoords.z + 3.0, true, true, false)
-
-    if not obj or obj == 0 or not DoesEntityExist(obj) then
+    if #handles == 0 then
         SetModelAsNoLongerNeeded(hash)
         return
     end
 
-    SetEntityAsMissionEntity(obj, true, true)
-
-    -- Attachement dynamique :
-    --   X = 0.0       → centré latéralement
-    --   Y = max.y+1.0 → entièrement devant le pare-chocs (dynamique par véhicule)
-    --   Z = 0.05      → au niveau du châssis, légèrement au-dessus pour ne pas s'enfoncer
-    --   rotZ = 180.0  → rampe orientée face à la route
-    AttachEntityToEntity(
-        obj, veh,
-        0,                          -- bone 0 = chassis
-        0.0, frontOffset, 0.05,     -- X, Y(dynamique), Z(niveau châssis)
-        0.0, 0.0, 180.0,           -- rotX, rotY, rotZ
-        false,  -- p9
-        true,   -- useSoftPinning
-        true,   -- collision avec le monde ON
-        false,  -- isPed
-        0,      -- vertexIndex
-        true    -- fixedRot
-    )
-
-    -- Collision avec le monde (autres véhicules montent dessus)
-    SetEntityCollision(obj, true, true)
-
-    -- Désactiver collision interne véhicule <> rampe
-    -- true = persistant (ne se reset pas)
-    SetEntityNoCollisionEntity(veh, obj, true)
-    SetEntityNoCollisionEntity(obj, veh, true)
-
-    -- Invincibilité
-    SetEntityInvincible(obj, true)
+    -- Invincibilité véhicule
     SetEntityInvincible(veh, true)
-    SetEntityProofs(obj, true, true, true, true, true, true, true, true)
     SetEntityProofs(veh, true, true, true, true, true, true, true, true)
     SetVehicleStrong(veh, true)
     SetVehicleCanBeVisiblyDamaged(veh, false)
 
-    _G._buggyRampHandle = obj
+    _G._buggyRampHandles = handles
     _G._buggyRampVeh = veh
+    _G._buggyRampCooldowns = {}
     SetModelAsNoLongerNeeded(hash)
-    print("[BuggyRamp] Attached " .. model .. " Y=" .. string.format("%.2f", frontOffset) .. " Z=0.05")
+    print("[BuggyRamp] Attached " .. #handles .. "x " .. modelName .. " Y=" .. string.format("%.2f", frontY))
 
-    -- Thread maintenance
+    -- Thread 1 : Maintenance (repair + re-enforce NoCollision)
     _G._buggyRampThread = true
     Citizen.CreateThread(function()
         while _G._buggyRampThread do
-            local r = _G._buggyRampHandle
             local v = _G._buggyRampVeh
-            if not r or not DoesEntityExist(r) then
+            if not v or not DoesEntityExist(v) then
                 _G._buggyRampThread = false
                 break
             end
-            if v and DoesEntityExist(v) then
-                if GetVehicleEngineHealth(v) < 900.0 then
-                    SetVehicleFixed(v)
-                    SetVehicleEngineOn(v, true, true, false)
+            if GetVehicleEngineHealth(v) < 900.0 then
+                SetVehicleFixed(v)
+                SetVehicleEngineOn(v, true, true, false)
+            end
+            SetVehicleCanBeVisiblyDamaged(v, false)
+            for _, r in ipairs(_G._buggyRampHandles) do
+                if DoesEntityExist(r) then
+                    SetEntityNoCollisionEntity(r, v, true)
+                    SetEntityNoCollisionEntity(v, r, true)
                 end
-                SetVehicleCanBeVisiblyDamaged(v, false)
-                SetEntityNoCollisionEntity(r, v, true)
-                SetEntityNoCollisionEntity(v, r, true)
             end
             Citizen.Wait(500)
+        end
+    end)
+
+    -- Thread 2 : Détection de collision + Force d'éjection
+    -- Scan les véhicules proches de la rampe, applique une impulsion vers le haut
+    _G._buggyRampForceThread = true
+    Citizen.CreateThread(function()
+        local myPlayerId = PlayerId()
+        while _G._buggyRampForceThread do
+            local v = _G._buggyRampVeh
+            if not v or not DoesEntityExist(v) then
+                _G._buggyRampForceThread = false
+                break
+            end
+
+            -- Position de la rampe (centre des 2 objets = avant du véhicule)
+            local vCoords = GetEntityCoords(v)
+            local vFwd = GetEntityForwardVector(v)
+            local vModel = GetEntityModel(v)
+            local _, vM = GetModelDimensions(vModel)
+            -- Point de détection = nez du véhicule + offset rampe
+            local detectX = vCoords.x + vFwd.x * (vM.y + 2.0)
+            local detectY = vCoords.y + vFwd.y * (vM.y + 2.0)
+            local detectZ = vCoords.z
+            local detectPos = vector3(detectX, detectY, detectZ)
+
+            -- Scan rayon 6m autour de la zone de rampe
+            local nearby = GetGamePool("CVehicle")
+            local now = GetGameTimer()
+            local power = EJECT_POWER[Menu.RampEjectPower] or EJECT_POWER["Medium"]
+
+            for _, nearVeh in ipairs(nearby) do
+                -- Skip notre propre véhicule
+                if nearVeh ~= v and DoesEntityExist(nearVeh) then
+                    -- Skip véhicules vides ou du joueur
+                    local driver = GetPedInVehicleSeat(nearVeh, -1)
+                    local isOurs = (driver == PlayerPedId())
+                    if not isOurs then
+                        local nCoords = GetEntityCoords(nearVeh)
+                        local dist = #(nCoords - detectPos)
+
+                        if dist < 6.0 then
+                            -- Cooldown : 1 éjection par véhicule toutes les 3s
+                            local lastHit = _G._buggyRampCooldowns[nearVeh]
+                            if not lastHit or (now - lastHit) > 3000 then
+                                _G._buggyRampCooldowns[nearVeh] = now
+
+                                -- Force d'impulsion : vers le haut + direction du véhicule porteur
+                                -- forceType 1 = impulsion instantanée
+                                ApplyForceToEntity(
+                                    nearVeh,
+                                    1,                          -- forceType: impulsion
+                                    vFwd.x * power.fwd,         -- forceX (direction avant)
+                                    vFwd.y * power.fwd,         -- forceY (direction avant)
+                                    power.z,                     -- forceZ (hauteur)
+                                    0.0, 0.0, 0.0,             -- offset (centre de masse)
+                                    0,                          -- boneIndex
+                                    false,                      -- isDirectionRel
+                                    true,                       -- ignoreUpVec
+                                    true,                       -- isForceRel
+                                    false,                      -- p12
+                                    true                        -- p13
+                                )
+
+                                -- Spin aléatoire pour l'effet spectaculaire
+                                local spinX = math.random(-5, 5) + 0.0
+                                local spinY = math.random(-3, 3) + 0.0
+                                ApplyForceToEntity(
+                                    nearVeh, 1,
+                                    0.0, 0.0, 0.0,
+                                    spinX, spinY, 0.0,
+                                    0, false, true, true, false, true
+                                )
+                            end
+                        end
+                    end
+                end
+            end
+
+            -- Nettoyage cooldowns périmés (> 10s)
+            for k, ts in pairs(_G._buggyRampCooldowns) do
+                if (now - ts) > 10000 then
+                    _G._buggyRampCooldowns[k] = nil
+                end
+            end
+
+            Citizen.Wait(50) -- 20 checks/s, fluide sans surcharge
         end
     end)
 end
 
 function Menu.DetachBuggyRamp()
     _G._buggyRampThread = false
+    _G._buggyRampForceThread = false
 
-    if _G._buggyRampHandle and DoesEntityExist(_G._buggyRampHandle) then
-        SetEntityInvincible(_G._buggyRampHandle, false)
-        DetachEntity(_G._buggyRampHandle, true, true)
-        SetEntityAsMissionEntity(_G._buggyRampHandle, true, true)
-        DeleteEntity(_G._buggyRampHandle)
+    for _, obj in ipairs(_G._buggyRampHandles) do
+        if obj and DoesEntityExist(obj) then
+            SetEntityInvincible(obj, false)
+            DetachEntity(obj, true, true)
+            SetEntityAsMissionEntity(obj, true, true)
+            DeleteEntity(obj)
+        end
     end
-    _G._buggyRampHandle = nil
+    _G._buggyRampHandles = {}
 
     if _G._buggyRampVeh and DoesEntityExist(_G._buggyRampVeh) then
         SetEntityInvincible(_G._buggyRampVeh, false)
@@ -13985,10 +14094,17 @@ function Menu.DetachBuggyRamp()
         SetVehicleCanBeVisiblyDamaged(_G._buggyRampVeh, true)
     end
     _G._buggyRampVeh = nil
-    print("[BuggyRamp] Detached, invincibility removed")
+    _G._buggyRampCooldowns = {}
+    print("[BuggyRamp] Detached, all cleaned up")
 end
 
-Actions.rampTypeSelector = nil
+-- Eject Power selector
+Actions.rampEjectPower = FindItem("Vehicle", "Performance", "Eject Power")
+if Actions.rampEjectPower then
+    Actions.rampEjectPower.onClick = function(index, option)
+        if option then Menu.RampEjectPower = option end
+    end
+end
 
 Actions.attachRamp = FindItem("Vehicle", "Performance", "Attach Ramp")
 if Actions.attachRamp then
