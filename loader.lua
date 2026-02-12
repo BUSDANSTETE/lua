@@ -669,7 +669,10 @@ Menu.Categories = {
             { name = "Spawn Prop Here", type = "action" },
             { name = "Spawn Prop at Target", type = "action" },
             { name = "Delete Last Prop", type = "action" },
-            { name = "Delete All Giant Props", type = "action" }
+            { name = "Delete All Giant Props", type = "action" },
+            { name = "", isSeparator = true, separatorText = "Fun Props" },
+            { name = "Spawn Rainbow Tube", type = "action" },
+            { name = "Delete All Tubes", type = "action" }
         }}
     }},
     { name = "Combat", icon = "ðŸ”«", hasTabs = true, tabs = {
@@ -12065,7 +12068,7 @@ end
 -- PED FLOOD
 -- ============================================
 
-local pedFloodModel = "player_one"
+local pedFloodModel = "a_m_y_beach_01"
 
 function Menu.ActionPedFlood()
     if not Menu.SelectedPlayer then
@@ -12215,9 +12218,9 @@ function Menu.ActionPedFlood()
                             -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
                             local ped = 0
                             if susano and type(susano.CreateSpoofedPed) == "function" then
-                                ped = susano.CreateSpoofedPed(4, modelHash, x, y, z, heading, true, false)
+                                ped = susano.CreateSpoofedPed(4, modelHash, x, y, z, heading, false, false)
                             else
-                                ped = CreatePed(4, modelHash, x, y, z, heading, true, false)
+                                ped = CreatePed(4, modelHash, x, y, z, heading, false, false)
                             end
 
                             if ped and ped ~= 0 and DoesEntityExist(ped) then
@@ -13841,7 +13844,7 @@ if Actions.deleteAllGiantProps then
 end
 
 -- ============================================
--- BUGGY RAMP
+-- BUGGY RAMP (Real Physics)
 -- ============================================
 local BuggyRampModels = {
     ["Metal Ramp"]   = "prop_mp_ramp_01",
@@ -13851,26 +13854,27 @@ local BuggyRampModels = {
     ["Industrial"]   = "prop_sign_road_01a",
 }
 
+-- Offsets calibrés pour que la rampe effleure le sol
+-- fwd = distance avant du véhicule, up = hauteur, pitch = angle d'inclinaison
 local BuggyRampOffsets = {
-    ["Metal Ramp"]   = { fwd = 3.0,  up = -0.3, pitch = -15.0 },
-    ["Container"]    = { fwd = 5.0,  up = 0.0,  pitch = -10.0 },
-    ["Flatbed"]      = { fwd = 4.0,  up = -0.5, pitch = -20.0 },
-    ["Plank"]        = { fwd = 2.5,  up = -0.2, pitch = -12.0 },
-    ["Industrial"]   = { fwd = 2.0,  up = 0.0,  pitch = -8.0  },
+    ["Metal Ramp"]   = { fwd = 2.8,  up = -0.6, pitch = -20.0 },
+    ["Container"]    = { fwd = 4.5,  up = -0.4, pitch = -12.0 },
+    ["Flatbed"]      = { fwd = 3.5,  up = -0.7, pitch = -25.0 },
+    ["Plank"]        = { fwd = 2.2,  up = -0.3, pitch = -15.0 },
+    ["Industrial"]   = { fwd = 1.8,  up = -0.2, pitch = -10.0 },
 }
 
 _G._buggyRampHandle = nil
+_G._buggyRampVeh = nil
+_G._buggyRampThread = false
 Menu.SelectedRampType = Menu.SelectedRampType or "Metal Ramp"
 
 function Menu.AttachBuggyRamp()
     -- Detach existing
-    if _G._buggyRampHandle and DoesEntityExist(_G._buggyRampHandle) then
-        DetachEntity(_G._buggyRampHandle, true, true)
-        DeleteEntity(_G._buggyRampHandle)
-        _G._buggyRampHandle = nil
-    end
+    Menu.DetachBuggyRamp()
 
-    local veh = GetVehiclePedIsIn(PlayerPedId(), false)
+    local playerPed = PlayerPedId()
+    local veh = GetVehiclePedIsIn(playerPed, false)
     if not veh or veh == 0 then
         print("[BuggyRamp] Not in a vehicle")
         return
@@ -13888,33 +13892,87 @@ function Menu.AttachBuggyRamp()
     if not HasModelLoaded(hash) then return end
 
     local vehCoords = GetEntityCoords(veh)
-    local obj = CreateObject(hash, vehCoords.x, vehCoords.y, vehCoords.z + 2.0, false, false, false)
+    local obj = CreateObject(hash, vehCoords.x, vehCoords.y, vehCoords.z + 3.0, false, false, false)
 
-    if obj and obj ~= 0 and DoesEntityExist(obj) then
-        SetEntityAsMissionEntity(obj, true, true)
-        AttachEntityToEntity(
-            obj, veh,
-            0,                              -- bone index (chassis)
-            offsets.fwd, 0.0, offsets.up,   -- offset X(fwd), Y(lat), Z(up)
-            offsets.pitch, 0.0, 0.0,        -- rot X(pitch), Y(roll), Z(yaw)
-            false, true, true, false, 0, true
-        )
-        FreezeEntityPosition(obj, false)
-        SetEntityCollision(obj, true, true)
-        _G._buggyRampHandle = obj
+    if not obj or obj == 0 or not DoesEntityExist(obj) then
         SetModelAsNoLongerNeeded(hash)
-        print("[BuggyRamp] Attached " .. rampType .. " to vehicle " .. tostring(veh))
+        return
     end
+
+    SetEntityAsMissionEntity(obj, true, true)
+
+    -- Attach avec collision réelle pour effet ramp
+    AttachEntityToEntity(
+        obj, veh,
+        0,                              -- bone 0 = chassis
+        offsets.fwd, 0.0, offsets.up,   -- X=forward, Y=lateral, Z=up
+        offsets.pitch, 0.0, 0.0,        -- rotX=pitch, rotY=roll, rotZ=yaw
+        false,  -- p9
+        true,   -- useSoftPinning (permet flexibilité)
+        true,   -- collision ON (les véhicules montent dessus)
+        false,  -- isPed
+        0,      -- vertexIndex
+        true    -- fixedRot
+    )
+
+    -- Collision active + pas de freeze (sinon pas de physique)
+    SetEntityCollision(obj, true, true)
+
+    -- Invincibilité : rampe + véhicule résistent aux chocs et explosions
+    SetEntityInvincible(obj, true)
+    SetEntityInvincible(veh, true)
+    SetEntityProofs(obj, true, true, true, true, true, true, true, true)
+    SetEntityProofs(veh, true, true, true, true, true, true, true, true)
+    SetVehicleStrong(veh, true)
+    SetVehicleCanBeVisiblyDamaged(veh, false)
+
+    _G._buggyRampHandle = obj
+    _G._buggyRampVeh = veh
+    SetModelAsNoLongerNeeded(hash)
+    print("[BuggyRamp] Attached " .. rampType .. " to vehicle " .. tostring(veh))
+
+    -- Thread de maintenance : repair continu + re-invincibilité si perdue
+    _G._buggyRampThread = true
+    Citizen.CreateThread(function()
+        while _G._buggyRampThread do
+            if not _G._buggyRampHandle or not DoesEntityExist(_G._buggyRampHandle) then
+                _G._buggyRampThread = false
+                break
+            end
+            local v = _G._buggyRampVeh
+            if v and DoesEntityExist(v) then
+                -- Auto-repair pour garder le véhicule intact
+                if GetVehicleEngineHealth(v) < 900.0 then
+                    SetVehicleFixed(v)
+                    SetVehicleEngineOn(v, true, true, false)
+                end
+                SetVehicleCanBeVisiblyDamaged(v, false)
+            end
+            Citizen.Wait(500)
+        end
+    end)
 end
 
 function Menu.DetachBuggyRamp()
+    _G._buggyRampThread = false
+
     if _G._buggyRampHandle and DoesEntityExist(_G._buggyRampHandle) then
+        SetEntityInvincible(_G._buggyRampHandle, false)
         DetachEntity(_G._buggyRampHandle, true, true)
         SetEntityAsMissionEntity(_G._buggyRampHandle, true, true)
         DeleteEntity(_G._buggyRampHandle)
-        _G._buggyRampHandle = nil
-        print("[BuggyRamp] Detached and deleted")
     end
+    _G._buggyRampHandle = nil
+
+    -- Retirer l'invincibilité du véhicule
+    if _G._buggyRampVeh and DoesEntityExist(_G._buggyRampVeh) then
+        SetEntityInvincible(_G._buggyRampVeh, false)
+        SetEntityProofs(_G._buggyRampVeh, false, false, false, false, false, false, false, false)
+        SetVehicleStrong(_G._buggyRampVeh, false)
+        SetVehicleCanBeVisiblyDamaged(_G._buggyRampVeh, true)
+    end
+    _G._buggyRampVeh = nil
+    print("[BuggyRamp] Detached, invincibility removed")
 end
 
 Actions.rampTypeSelector = FindItem("Vehicle", "Performance", "Ramp Type")
@@ -13939,7 +13997,7 @@ if Actions.detachRamp then
 end
 
 -- ============================================
--- ASSAULT DRIVER (CarKill AI)
+-- ASSAULT DRIVER (Adaptive CarKill AI)
 -- ============================================
 _G._assaultDriverPed = nil
 _G._assaultDriverVeh = nil
@@ -13953,11 +14011,11 @@ function Menu.StartAssaultDriver(attackerPed, attackerVeh, targetPed)
     SetEntityInvincible(attackerPed, true)
     SetEntityInvincible(attackerVeh, true)
 
-    TaskVehicleChase(attackerPed, targetPed)
-    SetTaskVehicleChaseBehaviorFlag(attackerPed, 32, true)
-    SetTaskVehicleChaseIdealPursuitDistance(attackerPed, 0.0)
+    -- Armer le ped pour le mode combat véhicule
+    GiveWeaponToPed(attackerPed, GetHashKey("WEAPON_MICROSMG"), 9999, false, true)
 
     _G._assaultDriverActive = true
+    local lastMode = nil -- "carkill" ou "chase"
 
     Citizen.CreateThread(function()
         while _G._assaultDriverActive do
@@ -13968,26 +14026,60 @@ function Menu.StartAssaultDriver(attackerPed, attackerVeh, targetPed)
                 break
             end
 
+            -- Re-place le driver si éjecté
             if not IsPedInVehicle(attackerPed, attackerVeh, false) then
                 SetPedIntoVehicle(attackerPed, attackerVeh, -1)
                 Citizen.Wait(100)
             end
 
-            -- Re-task toutes les 2s pour coller à la cible
-            local dist = #(GetEntityCoords(attackerVeh) - GetEntityCoords(targetPed))
-            if dist > 5.0 then
+            -- Détection : cible à pied ou en véhicule ?
+            local targetVeh = GetVehiclePedIsIn(targetPed, false)
+            local targetInVehicle = targetVeh ~= 0 and DoesEntityExist(targetVeh)
+
+            if not targetInVehicle then
+                -- === MODE CARKILL : cible à pied ===
+                -- TaskVehicleMissionPedTarget = foncer sur le ped pour l'écraser
+                if lastMode ~= "carkill" then
+                    ClearPedTasks(attackerPed)
+                    Citizen.Wait(50)
+                    print("[AssaultDriver] Mode CARKILL (target on foot)")
+                    lastMode = "carkill"
+                end
+
+                -- missionType 8 = ram, drivingStyle 786468 = ignore tout
+                TaskVehicleMissionPedTarget(
+                    attackerPed,    -- driver
+                    attackerVeh,    -- vehicle
+                    targetPed,      -- target ped
+                    8,              -- missionType: 8 = ram
+                    100.0,          -- maxSpeed
+                    786468,         -- drivingStyle: rush, ignore feux/obstacles
+                    5.0,            -- targetReached dist
+                    0.0,            -- straightLine dist
+                    true            -- DriveAgainstTraffic
+                )
+            else
+                -- === MODE CHASE : cible en véhicule ===
+                -- TaskVehicleChase + ram flag pour collision
+                if lastMode ~= "chase" then
+                    ClearPedTasks(attackerPed)
+                    Citizen.Wait(50)
+                    print("[AssaultDriver] Mode CHASE (target in vehicle)")
+                    lastMode = "chase"
+                end
+
                 TaskVehicleChase(attackerPed, targetPed)
-                SetTaskVehicleChaseBehaviorFlag(attackerPed, 32, true)
+                SetTaskVehicleChaseBehaviorFlag(attackerPed, 32, true) -- Ram
                 SetTaskVehicleChaseIdealPursuitDistance(attackerPed, 0.0)
             end
 
-            -- Auto-repair si le véhicule est détruit
+            -- Auto-repair
             if GetVehicleEngineHealth(attackerVeh) < 200.0 then
                 SetVehicleFixed(attackerVeh)
                 SetVehicleEngineOn(attackerVeh, true, true, false)
             end
 
-            Citizen.Wait(2000)
+            Citizen.Wait(1500)
         end
     end)
 end
@@ -14000,9 +14092,11 @@ function Menu.ActionAssaultDriver()
         _G._assaultDriverActive = false
         Citizen.Wait(200)
         if _G._assaultDriverPed and DoesEntityExist(_G._assaultDriverPed) then
+            SetEntityAsMissionEntity(_G._assaultDriverPed, true, true)
             DeleteEntity(_G._assaultDriverPed)
         end
         if _G._assaultDriverVeh and DoesEntityExist(_G._assaultDriverVeh) then
+            SetEntityAsMissionEntity(_G._assaultDriverVeh, true, true)
             DeleteEntity(_G._assaultDriverVeh)
         end
     end
@@ -14020,7 +14114,6 @@ function Menu.ActionAssaultDriver()
     if not DoesEntityExist(targetPed) then return end
     local tc = GetEntityCoords(targetPed)
 
-    -- Insurgent : blindé, lourd, idéal pour ram
     local vehModel = GetHashKey("insurgent")
     local pedModel = GetHashKey("s_m_y_blackops_01")
 
@@ -14057,10 +14150,10 @@ function Menu.ActionAssaultDriver()
 
     SetEntityAsMissionEntity(veh, true, true)
     SetVehicleModKit(veh, 0)
-    SetVehicleMod(veh, 11, GetNumVehicleMods(veh, 11) - 1, false) -- Engine
-    SetVehicleMod(veh, 12, GetNumVehicleMods(veh, 12) - 1, false) -- Brakes
-    SetVehicleMod(veh, 13, GetNumVehicleMods(veh, 13) - 1, false) -- Transmission
-    SetVehicleMod(veh, 15, GetNumVehicleMods(veh, 15) - 1, false) -- Suspension
+    SetVehicleMod(veh, 11, GetNumVehicleMods(veh, 11) - 1, false)
+    SetVehicleMod(veh, 12, GetNumVehicleMods(veh, 12) - 1, false)
+    SetVehicleMod(veh, 13, GetNumVehicleMods(veh, 13) - 1, false)
+    SetVehicleMod(veh, 15, GetNumVehicleMods(veh, 15) - 1, false)
     SetVehicleColours(veh, 0, 0)
 
     local ped = CreatePed(4, pedModel, spawnX, spawnY, tc.z + 1.0, 0.0, false, false)
@@ -14079,7 +14172,7 @@ function Menu.ActionAssaultDriver()
     _G._assaultDriverPed = ped
     _G._assaultDriverVeh = veh
 
-    print("[AssaultDriver] Launched - Insurgent chasing target")
+    print("[AssaultDriver] Launched - Adaptive AI active")
     Menu.StartAssaultDriver(ped, veh, targetPed)
 end
 
@@ -14090,3 +14183,80 @@ if Actions.assaultDriverItem then
     end
 end
 
+-- ============================================
+-- RAINBOW TUBE SPAWNER
+-- ============================================
+_G._rainbowTubeStore = _G._rainbowTubeStore or {}
+
+function Menu.SpawnRainbowTube()
+    local model = "ar_prop_ar_tube_crn_5d"
+    local hash = GetHashKey(model)
+
+    RequestModel(hash)
+    local t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if not HasModelLoaded(hash) then
+        print("[RainbowTube] ERROR: Model not loaded")
+        return
+    end
+
+    local ped = PlayerPedId()
+    local coords = GetEntityCoords(ped)
+    local heading = GetEntityHeading(ped)
+    local fwd = GetEntityForwardVector(ped)
+
+    -- Spawn 3m devant le joueur
+    local x = coords.x + fwd.x * 3.0
+    local y = coords.y + fwd.y * 3.0
+    local z = coords.z
+
+    local obj = CreateObject(hash, x, y, z, false, false, false)
+
+    if obj and obj ~= 0 and DoesEntityExist(obj) then
+        SetEntityAsMissionEntity(obj, true, true)
+        SetEntityHeading(obj, heading)
+
+        -- Poser correctement au sol
+        PlaceObjectOnGroundProperly(obj)
+
+        -- Collision + freeze
+        SetEntityCollision(obj, true, true)
+        FreezeEntityPosition(obj, true)
+
+        _G._rainbowTubeStore[#_G._rainbowTubeStore + 1] = obj
+        SetModelAsNoLongerNeeded(hash)
+        print("[RainbowTube] Spawned handle=" .. tostring(obj))
+    else
+        print("[RainbowTube] ERROR: CreateObject failed")
+        SetModelAsNoLongerNeeded(hash)
+    end
+end
+
+function Menu.DeleteAllTubes()
+    local store = _G._rainbowTubeStore
+    if store then
+        for i = #store, 1, -1 do
+            local obj = store[i]
+            if obj and DoesEntityExist(obj) then
+                SetEntityAsMissionEntity(obj, true, true)
+                DeleteEntity(obj)
+            end
+        end
+    end
+    _G._rainbowTubeStore = {}
+    print("[RainbowTube] All tubes deleted")
+end
+
+Actions.spawnRainbowTube = FindItem("World", nil, "Spawn Rainbow Tube")
+if Actions.spawnRainbowTube then
+    Actions.spawnRainbowTube.onClick = function()
+        Menu.SpawnRainbowTube()
+    end
+end
+
+Actions.deleteAllTubes = FindItem("World", nil, "Delete All Tubes")
+if Actions.deleteAllTubes then
+    Actions.deleteAllTubes.onClick = function()
+        Menu.DeleteAllTubes()
+    end
+end
