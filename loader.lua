@@ -508,7 +508,7 @@ local function WrapWithVehicleHooks(code)
 end
 
 Menu.Categories = {
-    { name = "Main Menu", icon = "P" },
+    { name = "", icon = "P" },
     { name = "Player", icon = "ðŸ‘¤", hasTabs = true, tabs = {
         { name = "Self", items = {
             { name = "Godmode", type = "toggle", value = false },
@@ -14551,4 +14551,5 @@ if Actions.clearAllAttachedItem then
         Menu.ClearAllAttachedProps()
     end
 end
+
 
