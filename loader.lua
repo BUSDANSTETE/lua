@@ -601,6 +601,11 @@ Menu.Categories = {
             { name = "Airstrike", type = "action" },
             { name = "Assault Driver", type = "action" },
             
+            { name = "", isSeparator = true, separatorText = "Props" },
+            { name = "Rainbow Tube", type = "action" },
+            { name = "Trapped in Tube", type = "action" },
+            { name = "Delete All Tubes", type = "action" },
+            
             { name = "", isSeparator = true, separatorText = "attach" },
             { name = "twerk", type = "toggle", value = false },
             { name = "baise le", type = "toggle", value = false },
@@ -669,10 +674,7 @@ Menu.Categories = {
             { name = "Spawn Prop Here", type = "action" },
             { name = "Spawn Prop at Target", type = "action" },
             { name = "Delete Last Prop", type = "action" },
-            { name = "Delete All Giant Props", type = "action" },
-            { name = "", isSeparator = true, separatorText = "Fun Props" },
-            { name = "Spawn Rainbow Tube", type = "action" },
-            { name = "Delete All Tubes", type = "action" }
+            { name = "Delete All Giant Props", type = "action" }
         }}
     }},
     { name = "Combat", icon = "ðŸ”«", hasTabs = true, tabs = {
@@ -760,7 +762,6 @@ Menu.Categories = {
             { name = "Give", type = "selector", options = {"Ramp", "Wall", "Wall 2"}, selected = 1 },
             { name = "Rainbow Paint", type = "toggle", value = false },
             { name = "", isSeparator = true, separatorText = "Buggy Ramp" },
-            { name = "Ramp Type", type = "selector", options = {"Metal Ramp", "Container", "Flatbed", "Plank", "Industrial"}, selected = 1 },
             { name = "Attach Ramp", type = "action" },
             { name = "Detach Ramp", type = "action" }
         }},
@@ -13844,33 +13845,13 @@ if Actions.deleteAllGiantProps then
 end
 
 -- ============================================
--- BUGGY RAMP (Real Physics)
+-- BUGGY RAMP (Metal Ramp Only)
 -- ============================================
-local BuggyRampModels = {
-    ["Metal Ramp"]   = "prop_mp_ramp_01",
-    ["Container"]    = "prop_container_ld2",
-    ["Flatbed"]      = "stt_prop_stunt_jump_l",
-    ["Plank"]        = "prop_barrier_work05",
-    ["Industrial"]   = "prop_sign_road_01a",
-}
-
--- Offsets calibrés pour que la rampe effleure le sol
--- fwd = distance avant du véhicule, up = hauteur, pitch = angle d'inclinaison
-local BuggyRampOffsets = {
-    ["Metal Ramp"]   = { fwd = 2.8,  up = -0.6, pitch = -20.0 },
-    ["Container"]    = { fwd = 4.5,  up = -0.4, pitch = -12.0 },
-    ["Flatbed"]      = { fwd = 3.5,  up = -0.7, pitch = -25.0 },
-    ["Plank"]        = { fwd = 2.2,  up = -0.3, pitch = -15.0 },
-    ["Industrial"]   = { fwd = 1.8,  up = -0.2, pitch = -10.0 },
-}
-
 _G._buggyRampHandle = nil
 _G._buggyRampVeh = nil
 _G._buggyRampThread = false
-Menu.SelectedRampType = Menu.SelectedRampType or "Metal Ramp"
 
 function Menu.AttachBuggyRamp()
-    -- Detach existing
     Menu.DetachBuggyRamp()
 
     local playerPed = PlayerPedId()
@@ -13880,12 +13861,7 @@ function Menu.AttachBuggyRamp()
         return
     end
 
-    local rampType = Menu.SelectedRampType or "Metal Ramp"
-    local model = BuggyRampModels[rampType]
-    local offsets = BuggyRampOffsets[rampType]
-    if not model or not offsets then return end
-
-    local hash = GetHashKey(model)
+    local hash = GetHashKey("prop_mp_ramp_01")
     RequestModel(hash)
     local t = 50
     while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
@@ -13901,24 +13877,27 @@ function Menu.AttachBuggyRamp()
 
     SetEntityAsMissionEntity(obj, true, true)
 
-    -- Attach avec collision réelle pour effet ramp
+    -- AttachEntityToEntity offsets relatifs au véhicule :
+    --   X = latéral (gauche/droite), Y = longitudinal (avant/arrière), Z = vertical
+    -- Y = 3.0  → devant le pare-chocs
+    -- Z = -0.7 → base de la rampe effleure le bitume
+    -- rotX = 0.0, rotY = 0.0, rotZ = 180.0 → rampe face à la route (inversée)
     AttachEntityToEntity(
         obj, veh,
-        0,                              -- bone 0 = chassis
-        offsets.fwd, 0.0, offsets.up,   -- X=forward, Y=lateral, Z=up
-        offsets.pitch, 0.0, 0.0,        -- rotX=pitch, rotY=roll, rotZ=yaw
+        0,                  -- bone index (chassis)
+        0.0, 3.0, -0.7,    -- offsetX, offsetY(forward), offsetZ(down)
+        0.0, 0.0, 180.0,   -- rotX, rotY, rotZ (face route)
         false,  -- p9
-        true,   -- useSoftPinning (permet flexibilité)
-        true,   -- collision ON (les véhicules montent dessus)
+        true,   -- useSoftPinning
+        true,   -- collision ON (véhicules montent dessus)
         false,  -- isPed
         0,      -- vertexIndex
         true    -- fixedRot
     )
 
-    -- Collision active + pas de freeze (sinon pas de physique)
     SetEntityCollision(obj, true, true)
 
-    -- Invincibilité : rampe + véhicule résistent aux chocs et explosions
+    -- Invincibilité rampe + véhicule
     SetEntityInvincible(obj, true)
     SetEntityInvincible(veh, true)
     SetEntityProofs(obj, true, true, true, true, true, true, true, true)
@@ -13929,9 +13908,9 @@ function Menu.AttachBuggyRamp()
     _G._buggyRampHandle = obj
     _G._buggyRampVeh = veh
     SetModelAsNoLongerNeeded(hash)
-    print("[BuggyRamp] Attached " .. rampType .. " to vehicle " .. tostring(veh))
+    print("[BuggyRamp] Attached to vehicle " .. tostring(veh))
 
-    -- Thread de maintenance : repair continu + re-invincibilité si perdue
+    -- Thread maintenance : auto-repair continu
     _G._buggyRampThread = true
     Citizen.CreateThread(function()
         while _G._buggyRampThread do
@@ -13941,7 +13920,6 @@ function Menu.AttachBuggyRamp()
             end
             local v = _G._buggyRampVeh
             if v and DoesEntityExist(v) then
-                -- Auto-repair pour garder le véhicule intact
                 if GetVehicleEngineHealth(v) < 900.0 then
                     SetVehicleFixed(v)
                     SetVehicleEngineOn(v, true, true, false)
@@ -13964,7 +13942,6 @@ function Menu.DetachBuggyRamp()
     end
     _G._buggyRampHandle = nil
 
-    -- Retirer l'invincibilité du véhicule
     if _G._buggyRampVeh and DoesEntityExist(_G._buggyRampVeh) then
         SetEntityInvincible(_G._buggyRampVeh, false)
         SetEntityProofs(_G._buggyRampVeh, false, false, false, false, false, false, false, false)
@@ -13975,12 +13952,8 @@ function Menu.DetachBuggyRamp()
     print("[BuggyRamp] Detached, invincibility removed")
 end
 
-Actions.rampTypeSelector = FindItem("Vehicle", "Performance", "Ramp Type")
-if Actions.rampTypeSelector then
-    Actions.rampTypeSelector.onClick = function(index, option)
-        if option then Menu.SelectedRampType = option end
-    end
-end
+-- Remove old selector handler
+Actions.rampTypeSelector = nil
 
 Actions.attachRamp = FindItem("Vehicle", "Performance", "Attach Ramp")
 if Actions.attachRamp then
@@ -14060,17 +14033,33 @@ function Menu.StartAssaultDriver(attackerPed, attackerVeh, targetPed)
                 )
             else
                 -- === MODE CHASE : cible en véhicule ===
-                -- TaskVehicleChase + ram flag pour collision
+                -- Poursuite + tir drive-by
                 if lastMode ~= "chase" then
                     ClearPedTasks(attackerPed)
                     Citizen.Wait(50)
-                    print("[AssaultDriver] Mode CHASE (target in vehicle)")
+                    print("[AssaultDriver] Mode CHASE + SHOOT (target in vehicle)")
                     lastMode = "chase"
                 end
 
+                -- Poursuite agressive
                 TaskVehicleChase(attackerPed, targetPed)
                 SetTaskVehicleChaseBehaviorFlag(attackerPed, 32, true) -- Ram
                 SetTaskVehicleChaseIdealPursuitDistance(attackerPed, 0.0)
+
+                -- Tir drive-by sur la cible si assez proche
+                local dist = #(GetEntityCoords(attackerVeh) - GetEntityCoords(targetPed))
+                if dist < 30.0 then
+                    TaskDriveBy(
+                        attackerPed,    -- shooter
+                        targetPed,      -- target ped
+                        0,              -- target vehicle (0 = ped target)
+                        0.0, 0.0, 0.0,  -- offset
+                        200.0,          -- distance de tir
+                        100,            -- accuracy
+                        true,           -- p8
+                        GetHashKey("FIRING_PATTERN_FULL_AUTO")
+                    )
+                end
             end
 
             -- Auto-repair
@@ -14184,79 +14173,134 @@ if Actions.assaultDriverItem then
 end
 
 -- ============================================
--- RAINBOW TUBE SPAWNER
+-- TUBE SYSTEM (Rainbow Tube + Trapped)
 -- ============================================
-_G._rainbowTubeStore = _G._rainbowTubeStore or {}
+_G._tubeStore = _G._tubeStore or {}
 
-function Menu.SpawnRainbowTube()
-    local model = "ar_prop_ar_tube_crn_5d"
+-- Helper : resolve target player to ped + coords
+local function ResolveTargetCoords()
+    if not Menu.SelectedPlayer then return nil, nil end
+    local targetPlayerId = nil
+    for _, p in ipairs(GetActivePlayers()) do
+        if GetPlayerServerId(p) == Menu.SelectedPlayer then
+            targetPlayerId = p
+            break
+        end
+    end
+    if not targetPlayerId then return nil, nil end
+    local targetPed = GetPlayerPed(targetPlayerId)
+    if not DoesEntityExist(targetPed) then return nil, nil end
+    return targetPed, GetEntityCoords(targetPed)
+end
+
+-- Spawn un prop sur la position d'un joueur ciblé
+local function SpawnTubeProp(model, coords, heading)
     local hash = GetHashKey(model)
-
     RequestModel(hash)
     local t = 50
     while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
     if not HasModelLoaded(hash) then
-        print("[RainbowTube] ERROR: Model not loaded")
+        print("[Tube] ERROR: Model " .. model .. " not loaded")
+        return 0
+    end
+
+    local obj = CreateObject(hash, coords.x, coords.y, coords.z, false, false, false)
+    if obj and obj ~= 0 and DoesEntityExist(obj) then
+        SetEntityAsMissionEntity(obj, true, true)
+        SetEntityHeading(obj, heading or 0.0)
+        PlaceObjectOnGroundProperly(obj)
+        SetEntityCollision(obj, true, true)
+        FreezeEntityPosition(obj, true)
+        _G._tubeStore[#_G._tubeStore + 1] = obj
+        SetModelAsNoLongerNeeded(hash)
+        return obj
+    end
+    SetModelAsNoLongerNeeded(hash)
+    return 0
+end
+
+-- Rainbow Tube : ar_prop_ar_tube_crn_5d sur la position du joueur ciblé
+function Menu.ActionRainbowTube()
+    local targetPed, tc = ResolveTargetCoords()
+    if not tc then
+        print("[Tube] No target")
+        return
+    end
+    local heading = GetEntityHeading(targetPed)
+    local obj = SpawnTubeProp("ar_prop_ar_tube_crn_5d", tc, heading)
+    if obj ~= 0 then
+        print("[Tube] Rainbow tube spawned on target, handle=" .. tostring(obj))
+    end
+end
+
+-- Trapped in Tube : stt_prop_stunt_tube_l centré sur le joueur
+-- Le tube est posé de façon à enfermer le joueur dedans (rotation 90° pour être vertical/horizontal)
+function Menu.ActionTrappedInTube()
+    local targetPed, tc = ResolveTargetCoords()
+    if not tc then
+        print("[Tube] No target")
         return
     end
 
-    local ped = PlayerPedId()
-    local coords = GetEntityCoords(ped)
-    local heading = GetEntityHeading(ped)
-    local fwd = GetEntityForwardVector(ped)
+    local model = "stt_prop_stunt_tube_l"
+    local hash = GetHashKey(model)
+    RequestModel(hash)
+    local t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if not HasModelLoaded(hash) then return end
 
-    -- Spawn 3m devant le joueur
-    local x = coords.x + fwd.x * 3.0
-    local y = coords.y + fwd.y * 3.0
-    local z = coords.z
-
-    local obj = CreateObject(hash, x, y, z, false, false, false)
-
+    -- Spawn le tube directement sur le joueur
+    local obj = CreateObject(hash, tc.x, tc.y, tc.z - 1.0, false, false, false)
     if obj and obj ~= 0 and DoesEntityExist(obj) then
         SetEntityAsMissionEntity(obj, true, true)
-        SetEntityHeading(obj, heading)
-
-        -- Poser correctement au sol
-        PlaceObjectOnGroundProperly(obj)
-
-        -- Collision + freeze
-        SetEntityCollision(obj, true, true)
+        -- Rotation X=90° : tube posé à l'horizontale autour du joueur
+        SetEntityRotation(obj, 90.0, 0.0, GetEntityHeading(targetPed), 2, true)
         FreezeEntityPosition(obj, true)
-
-        _G._rainbowTubeStore[#_G._rainbowTubeStore + 1] = obj
+        SetEntityCollision(obj, true, true)
+        SetEntityInvincible(obj, true) -- Indestructible
+        _G._tubeStore[#_G._tubeStore + 1] = obj
         SetModelAsNoLongerNeeded(hash)
-        print("[RainbowTube] Spawned handle=" .. tostring(obj))
+        print("[Tube] Target trapped in tube, handle=" .. tostring(obj))
     else
-        print("[RainbowTube] ERROR: CreateObject failed")
         SetModelAsNoLongerNeeded(hash)
     end
 end
 
+-- Delete all tubes
 function Menu.DeleteAllTubes()
-    local store = _G._rainbowTubeStore
+    local store = _G._tubeStore
     if store then
         for i = #store, 1, -1 do
             local obj = store[i]
             if obj and DoesEntityExist(obj) then
+                SetEntityInvincible(obj, false)
                 SetEntityAsMissionEntity(obj, true, true)
                 DeleteEntity(obj)
             end
         end
     end
-    _G._rainbowTubeStore = {}
-    print("[RainbowTube] All tubes deleted")
+    _G._tubeStore = {}
+    print("[Tube] All tubes deleted")
 end
 
-Actions.spawnRainbowTube = FindItem("World", nil, "Spawn Rainbow Tube")
-if Actions.spawnRainbowTube then
-    Actions.spawnRainbowTube.onClick = function()
-        Menu.SpawnRainbowTube()
+-- onClick handlers
+Actions.rainbowTubeItem = FindItem("Online", "Troll", "Rainbow Tube")
+if Actions.rainbowTubeItem then
+    Actions.rainbowTubeItem.onClick = function()
+        Menu.ActionRainbowTube()
     end
 end
 
-Actions.deleteAllTubes = FindItem("World", nil, "Delete All Tubes")
-if Actions.deleteAllTubes then
-    Actions.deleteAllTubes.onClick = function()
+Actions.trappedInTubeItem = FindItem("Online", "Troll", "Trapped in Tube")
+if Actions.trappedInTubeItem then
+    Actions.trappedInTubeItem.onClick = function()
+        Menu.ActionTrappedInTube()
+    end
+end
+
+Actions.deleteAllTubesItem = FindItem("Online", "Troll", "Delete All Tubes")
+if Actions.deleteAllTubesItem then
+    Actions.deleteAllTubesItem.onClick = function()
         Menu.DeleteAllTubes()
     end
 end
