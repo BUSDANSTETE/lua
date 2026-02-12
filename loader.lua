@@ -604,6 +604,8 @@ Menu.Categories = {
             { name = "", isSeparator = true, separatorText = "Props" },
             { name = "Rainbow Tube", type = "action" },
             { name = "Trapped in Tube", type = "action" },
+            { name = "Attach Toilet", type = "action" },
+            { name = "Clear All Attached", type = "action" },
             { name = "Delete All Tubes", type = "action" },
             
             { name = "", isSeparator = true, separatorText = "attach" },
@@ -13851,6 +13853,10 @@ _G._buggyRampHandle = nil
 _G._buggyRampVeh = nil
 _G._buggyRampThread = false
 
+-- Modèle principal + fallback si bugué
+local RAMP_MODEL_PRIMARY  = "prop_mp_ramp_01"
+local RAMP_MODEL_FALLBACK = "lts_prop_lts_ramp_01"
+
 function Menu.AttachBuggyRamp()
     Menu.DetachBuggyRamp()
 
@@ -13861,11 +13867,25 @@ function Menu.AttachBuggyRamp()
         return
     end
 
-    local hash = GetHashKey("prop_mp_ramp_01")
+    -- Essai modèle principal, fallback si échec
+    local model = RAMP_MODEL_PRIMARY
+    local hash = GetHashKey(model)
     RequestModel(hash)
     local t = 50
     while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
-    if not HasModelLoaded(hash) then return end
+
+    if not HasModelLoaded(hash) then
+        print("[BuggyRamp] Primary model failed, trying fallback")
+        model = RAMP_MODEL_FALLBACK
+        hash = GetHashKey(model)
+        RequestModel(hash)
+        t = 50
+        while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+        if not HasModelLoaded(hash) then
+            print("[BuggyRamp] Both models failed")
+            return
+        end
+    end
 
     local vehCoords = GetEntityCoords(veh)
     local obj = CreateObject(hash, vehCoords.x, vehCoords.y, vehCoords.z + 3.0, false, false, false)
@@ -13877,25 +13897,32 @@ function Menu.AttachBuggyRamp()
 
     SetEntityAsMissionEntity(obj, true, true)
 
-    -- AttachEntityToEntity offsets relatifs au véhicule :
-    --   X = latéral (gauche/droite), Y = longitudinal (avant/arrière), Z = vertical
-    -- Y = 3.0  → devant le pare-chocs
-    -- Z = -0.7 → base de la rampe effleure le bitume
-    -- rotX = 0.0, rotY = 0.0, rotZ = 180.0 → rampe face à la route (inversée)
+    -- Offsets relatifs au véhicule :
+    --   X = latéral, Y = longitudinal (avant), Z = vertical
+    -- Y = 4.5 → rampe entièrement devant le pare-chocs, pas de collision moteur
+    -- Z = -0.75 → base proche du bitume
+    -- rotZ = 180.0 → rampe orientée face à la route
     AttachEntityToEntity(
         obj, veh,
-        0,                  -- bone index (chassis)
-        0.0, 3.0, -0.7,    -- offsetX, offsetY(forward), offsetZ(down)
-        0.0, 0.0, 180.0,   -- rotX, rotY, rotZ (face route)
+        0,                      -- bone 0 = chassis
+        0.0, 4.5, -0.75,       -- X=centré, Y=4.5 devant, Z=-0.75 bas
+        0.0, 0.0, 180.0,       -- rotX, rotY, rotZ=180 face route
         false,  -- p9
         true,   -- useSoftPinning
-        true,   -- collision ON (véhicules montent dessus)
+        true,   -- collision ON (les autres véhicules montent dessus)
         false,  -- isPed
         0,      -- vertexIndex
         true    -- fixedRot
     )
 
+    -- Force la rampe à se poser sur le sol correctement
+    PlaceObjectOnGroundProperly(obj)
+
+    -- Collision avec le monde, MAIS désactiver collision interne véhicule<>rampe
+    -- Empêche le véhicule de sauter/s'envoler à cause du conflit de collision
     SetEntityCollision(obj, true, true)
+    SetEntityNoCollisionEntity(obj, veh, false)
+    SetEntityNoCollisionEntity(veh, obj, false)
 
     -- Invincibilité rampe + véhicule
     SetEntityInvincible(obj, true)
@@ -13908,23 +13935,27 @@ function Menu.AttachBuggyRamp()
     _G._buggyRampHandle = obj
     _G._buggyRampVeh = veh
     SetModelAsNoLongerNeeded(hash)
-    print("[BuggyRamp] Attached to vehicle " .. tostring(veh))
+    print("[BuggyRamp] Attached " .. model .. " to vehicle " .. tostring(veh))
 
-    -- Thread maintenance : auto-repair continu
+    -- Thread maintenance : auto-repair + re-apply NoCollision
     _G._buggyRampThread = true
     Citizen.CreateThread(function()
         while _G._buggyRampThread do
-            if not _G._buggyRampHandle or not DoesEntityExist(_G._buggyRampHandle) then
+            local r = _G._buggyRampHandle
+            local v = _G._buggyRampVeh
+            if not r or not DoesEntityExist(r) then
                 _G._buggyRampThread = false
                 break
             end
-            local v = _G._buggyRampVeh
             if v and DoesEntityExist(v) then
                 if GetVehicleEngineHealth(v) < 900.0 then
                     SetVehicleFixed(v)
                     SetVehicleEngineOn(v, true, true, false)
                 end
                 SetVehicleCanBeVisiblyDamaged(v, false)
+                -- Re-enforce no-collision interne chaque tick
+                SetEntityNoCollisionEntity(r, v, false)
+                SetEntityNoCollisionEntity(v, r, false)
             end
             Citizen.Wait(500)
         end
@@ -13952,7 +13983,6 @@ function Menu.DetachBuggyRamp()
     print("[BuggyRamp] Detached, invincibility removed")
 end
 
--- Remove old selector handler
 Actions.rampTypeSelector = nil
 
 Actions.attachRamp = FindItem("Vehicle", "Performance", "Attach Ramp")
@@ -14302,5 +14332,101 @@ Actions.deleteAllTubesItem = FindItem("Online", "Troll", "Delete All Tubes")
 if Actions.deleteAllTubesItem then
     Actions.deleteAllTubesItem.onClick = function()
         Menu.DeleteAllTubes()
+    end
+end
+
+-- ============================================
+-- ATTACH TOILET (Fun Props on Target Player)
+-- ============================================
+_G._attachedToiletStore = _G._attachedToiletStore or {}
+
+function Menu.ActionAttachToilet()
+    if not Menu.SelectedPlayer then return end
+
+    local targetPlayerId = nil
+    for _, p in ipairs(GetActivePlayers()) do
+        if GetPlayerServerId(p) == Menu.SelectedPlayer then
+            targetPlayerId = p
+            break
+        end
+    end
+    if not targetPlayerId then return end
+
+    local targetPed = GetPlayerPed(targetPlayerId)
+    if not DoesEntityExist(targetPed) then return end
+
+    local model = "prop_ld_toilet_01"
+    local hash = GetHashKey(model)
+    RequestModel(hash)
+    local t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if not HasModelLoaded(hash) then
+        print("[Toilet] Model failed to load")
+        return
+    end
+
+    local tc = GetEntityCoords(targetPed)
+    local obj = CreateObject(hash, tc.x, tc.y, tc.z + 1.0, false, false, false)
+
+    if not obj or obj == 0 or not DoesEntityExist(obj) then
+        SetModelAsNoLongerNeeded(hash)
+        return
+    end
+
+    SetEntityAsMissionEntity(obj, true, true)
+
+    -- Bone SKEL_Head (tête) pour l'effet ridicule
+    local boneIndex = GetPedBoneIndex(targetPed, 31086) -- SKEL_Head
+
+    -- Attach sur la tête du joueur ciblé
+    -- Offsets : X=0 centré, Y=0 centré, Z=0.2 légèrement au-dessus
+    AttachEntityToEntity(
+        obj, targetPed,
+        boneIndex,
+        0.0, 0.0, 0.2,    -- offset X, Y, Z (au-dessus de la tête)
+        0.0, 0.0, 0.0,    -- rotation
+        true,   -- p9
+        true,   -- useSoftPinning (reste attaché quand le joueur bouge)
+        false,  -- collision OFF (évite que l'objet pousse le joueur)
+        true,   -- isPed = true (attaché à un ped)
+        0,      -- vertexIndex
+        true    -- fixedRot
+    )
+
+    SetEntityInvincible(obj, true)
+    SetModelAsNoLongerNeeded(hash)
+
+    _G._attachedToiletStore[#_G._attachedToiletStore + 1] = obj
+    print("[Toilet] Attached to target head, handle=" .. tostring(obj))
+end
+
+function Menu.ClearAllAttachedProps()
+    local store = _G._attachedToiletStore
+    if store then
+        for i = #store, 1, -1 do
+            local obj = store[i]
+            if obj and DoesEntityExist(obj) then
+                SetEntityInvincible(obj, false)
+                DetachEntity(obj, true, true)
+                SetEntityAsMissionEntity(obj, true, true)
+                DeleteEntity(obj)
+            end
+        end
+    end
+    _G._attachedToiletStore = {}
+    print("[Toilet] All attached props cleared")
+end
+
+Actions.attachToiletItem = FindItem("Online", "Troll", "Attach Toilet")
+if Actions.attachToiletItem then
+    Actions.attachToiletItem.onClick = function()
+        Menu.ActionAttachToilet()
+    end
+end
+
+Actions.clearAllAttachedItem = FindItem("Online", "Troll", "Clear All Attached")
+if Actions.clearAllAttachedItem then
+    Actions.clearAllAttachedItem.onClick = function()
+        Menu.ClearAllAttachedProps()
     end
 end
