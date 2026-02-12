@@ -12072,7 +12072,7 @@ end
 -- PED FLOOD
 -- ============================================
 
-local pedFloodModel = "a_m_y_beach_01"
+local pedFloodModel = "player_one"
 
 function Menu.ActionPedFlood()
     if not Menu.SelectedPlayer then
@@ -12222,9 +12222,9 @@ function Menu.ActionPedFlood()
                             -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
                             local ped = 0
                             if susano and type(susano.CreateSpoofedPed) == "function" then
-                                ped = susano.CreateSpoofedPed(4, modelHash, x, y, z, heading, false, false)
+                                ped = susano.CreateSpoofedPed(4, modelHash, x, y, z, heading, true, false)
                             else
-                                ped = CreatePed(4, modelHash, x, y, z, heading, false, false)
+                                ped = CreatePed(4, modelHash, x, y, z, heading, true, false)
                             end
 
                             if ped and ped ~= 0 and DoesEntityExist(ped) then
@@ -14551,3 +14551,4 @@ if Actions.clearAllAttachedItem then
         Menu.ClearAllAttachedProps()
     end
 end
+
