@@ -511,12 +511,6 @@ Menu.Categories = {
     { name = "Main Menu", icon = "P" },
     { name = "Player", icon = "ðŸ‘¤", hasTabs = true, tabs = {
         { name = "Self", items = {
-            { name = "Godmode", type = "toggle", value = false },
-            { name = "Semi Godmode", type = "toggle", value = false },
-            { name = "Infinite Stamina", type = "toggle", value = false },
-            { name = "Max Health", type = "action" },
-            { name = "Max Armor", type = "action" },
-            { name = "Anti Headshot", type = "toggle", value = false },
             { name = "", isSeparator = true, separatorText = "Health" },
             { name = "Revive", type = "action" },
             { name = "", isSeparator = true, separatorText = "other" },
@@ -525,16 +519,6 @@ Menu.Categories = {
             { name = "Solo Session", type = "toggle", value = false },
             { name = "Throw Vehicle", type = "toggle", value = false },
             { name = "Tiny Player", type = "toggle", value = false },
-        }},
-        { name = "Movement", items = {
-            { name = "", isSeparator = true, separatorText = "noclip" },
-            { name = "Noclip", type = "toggle", value = false, hasSlider = true, sliderValue = 1.0, sliderMin = 1.0, sliderMax = 20.0, sliderStep = 0.5 },
-            { name = "NoClip Type", type = "selector", options = {"normal", "staff"}, selected = 1 },
-            { name = "", isSeparator = true, separatorText = "freecam" },
-            { name = "Freecam", type = "toggle", value = false, hasSlider = true,sliderValue = 0.5, sliderMin = 0.1, sliderMax = 5.0, sliderStep = 0.1 },
-            { name = "", isSeparator = true, separatorText = "other" },
-            { name = "Fast Run", type = "toggle", value = false},
-            { name = "No Ragdoll", type = "toggle", value = false }
         }},
         { name = "Wardrobe", items = {
             { name = "Random Outfit", type = "action" },
@@ -593,11 +577,9 @@ Menu.Categories = {
             
             { name = "", isSeparator = true, separatorText = "Bugs" },
             { name = "Bug Player", type = "selector", options = {"Bug", "Launch", "Hard Launch", "Attach"}, selected = 1 },
-            { name = "Cage Player", type = "action" },
             { name = "Crush", type = "selector", options = {"Rain", "Drop", "Ram"}, selected = 1 },
             { name = "Black Hole", type = "toggle", value = false },
             { name = "Ped Flood", type = "action" },
-            { name = "Ped Armed", type = "action" },
             { name = "Airstrike", type = "action" },
             { name = "Assault Driver", type = "action" },
             
@@ -636,33 +618,7 @@ Menu.Categories = {
             { name = "Launch All", type = "action" }
         }}
     }},
-    { name = "Visual", icon = "ðŸ‘", hasTabs = true, tabs = {
-        { name = "ESP", items = {
-            { name = "", isSeparator = true, separatorText = "ESP" },
-            { name = "Draw Self", type = "toggle", value = false },
-            { name = "Draw Skeleton", type = "toggle", value = false },
-            { name = "Draw Box", type = "toggle", value = false },
-            { name = "Draw Line", type = "toggle", value = false },
-            
-            { name = "", isSeparator = true, separatorText = "Extra" },
-            { name = "Enable Player ESP", type = "toggle", value = false },
-            { name = "Draw Name", type = "toggle", value = false },
-            { name = "Name Position", type = "selector", options = {"Top", "Bottom", "Left", "Right"}, selected = 1 },
-            { name = "Draw ID", type = "toggle", value = false },
-            { name = "ID Position", type = "selector", options = {"Top", "Bottom", "Left", "Right"}, selected = 1 },
-            { name = "Draw Distance", type = "toggle", value = false },
-            { name = "Distance Position", type = "selector", options = {"Top", "Bottom", "Left", "Right"}, selected = 1 },
-            { name = "Draw Weapon", type = "toggle", value = false },
-            { name = "Weapon Position", type = "selector", options = {"Top", "Bottom", "Left", "Right"}, selected = 1 },
-            { name = "Draw Health", type = "toggle", value = false },
-            { name = "Draw Armor", type = "toggle", value = false },
-            
-            { name = "", isSeparator = true, separatorText = "color" },
-            { name = "Text Color", type = "selector", options = {"White", "Red", "Green", "Blue", "Yellow", "Purple", "Cyan"}, selected = 1 },
-            { name = "Skeleton Color", type = "selector", options = {"White", "Red", "Green", "Blue", "Yellow", "Purple", "Cyan"}, selected = 1 },
-            { name = "Box Color", type = "selector", options = {"White", "Red", "Green", "Blue", "Yellow", "Purple", "Cyan"}, selected = 1 },
-            { name = "Line Color", type = "selector", options = {"White", "Red", "Green", "Blue", "Yellow", "Purple", "Cyan"}, selected = 1 },
-        }},
+    { name = "Visual", icon = "ð", hasTabs = true, tabs = {
         { name = "World", items = {
             { name = "FPS Boost", type = "toggle", value = false },
             { name = "Time", type = "slider", value = 12.0, min = 0.0, max = 23.0 },
@@ -670,25 +626,13 @@ Menu.Categories = {
             { name = "Weather", type = "selector", options = {"Extrasunny", "Clear", "Clouds", "Smog", "Fog", "Overcast", "Rain", "Thunder", "Clearing", "Neutral", "Snow", "Blizzard", "Snowlight", "Xmas", "Halloween"}, selected = 1 },
             { name = "", isSeparator = true, separatorText = "Effects" },
             { name = "Blackout", type = "toggle", value = false },
-            { name = "Delete All Props", type = "action" },
-            { name = "", isSeparator = true, separatorText = "Props" },
-            { name = "Giant Prop", type = "selector", options = {"Chiliad Rock", "Highway Ramp", "Crane", "Radio Tower", "Oil Tank", "Container Stack", "Bridge Section", "Satellite Dish"}, selected = 1 },
-            { name = "Spawn Prop Here", type = "action" },
-            { name = "Spawn Prop at Target", type = "action" },
-            { name = "Delete Last Prop", type = "action" },
-            { name = "Delete All Giant Props", type = "action" }
+            { name = "Delete All Props", type = "action" }
         }}
+    }},
     }},
     { name = "Combat", icon = "ðŸ”«", hasTabs = true, tabs = {
         { name = "General", items = {
             { name = "Attach Target (H)", type = "toggle", value = false, onClick = function(val) ToggleAttachTarget(val) end },
-            { name = "", isSeparator = true, separatorText = "Aimbot" },
-            { name = "Silent Aim", type = "toggle", value = false },
-            { name = "Magic Bullet", type = "toggle", value = false },
-            { name = "Shoot Eyes", type = "toggle", value = false },
-            { name = "Super Punch", type = "toggle", value = false },
-            { name = "Infinite Ammo", type = "toggle", value = false },
-            { name = "Rapid Fire", type = "toggle", value = false },
             { name = "", isSeparator = true, separatorText = "Weapon Mods" },
             { name = "No Recoil", type = "toggle", value = false},
             { name = "No Spread", type = "toggle", value = false},
@@ -723,14 +667,6 @@ Menu.Categories = {
         }}
     }},
     { name = "Vehicle", icon = "ðŸš—", hasTabs = true, tabs = {
-        { name = "Spawn", items = {
-            { name = "Teleport Into", type = "toggle", value = false },
-            { name = "", isSeparator = true, separatorText = "spawn" },
-            { name = "Car", type = "selector", options = {"Adder", "Zentorno", "T20", "Osiris", "Entity XF"}, selected = 1 },
-            { name = "Moto", type = "selector", options = {"Bati 801", "Sanchez", "Akuma", "Hakuchou"}, selected = 1 },
-            { name = "Plane", type = "selector", options = {"Luxor", "Hydra", "Lazer", "Besra"}, selected = 1 },
-            { name = "Boat", type = "selector", options = {"Seashark", "Speeder", "Jetmax", "Toro"}, selected = 1 },
-        }},
         { name = "Performance", items = {
             { name = "", isSeparator = true, separatorText = "Warp" },
             { name = "FOV Warp", type = "toggle", value = false, onClick = function(val) Menu.FOVWarp = val end },
@@ -1975,282 +1911,14 @@ Citizen.CreateThread(function()
 end)
 
 Menu.OnRender = function()
-    Actions.noclipItem = FindItem("Player", "Movement", "Noclip")
-    if Actions.noclipItem and Actions.noclipItem.value then
-        local currentSpeed = Actions.noclipItem.sliderValue or 1.0
-        if lastNoclipSpeed ~= currentSpeed then
-            if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
-                Susano.InjectResource("any", string.format([[
-                    if _G then
-                        _G.NoclipSpeed = %s
-                    end
-                ]], tostring(currentSpeed)))
-            end
-            lastNoclipSpeed = currentSpeed
-        end
-    end
-
-    
-    if not espSettings then espSettings = GetESPSettings() end
     if not worldSettings then worldSettings = GetWorldSettings() end
-
-    
     RenderWorldVisuals(worldSettings)
-
-    local drawSelf = espSettings["Draw Self"] and espSettings["Draw Self"].value
-    local enablePlayerESP = espSettings["Enable Player ESP"] and espSettings["Enable Player ESP"].value
-    
-    
-    if drawSelf or enablePlayerESP then
-        Menu.PreventResetFrame = true
-        
-        local ped = PlayerPedId()
-        local screenW, screenH = GetScreenSize()
-        if not screenW or not screenH then return end
-        
-        local myPos = GetEntityCoords(ped)
-
-        
-        if drawSelf then
-            RenderPedESP(ped, PlayerId(), espSettings, screenW, screenH, myPos)
-        end
-
-        
-        if enablePlayerESP then
-            -- Optimisation: trier les joueurs par distance pour prioriser les plus proches
-            local players = {}
-            for _, player in ipairs(GetActivePlayers()) do
-                local targetPed = GetPlayerPed(player)
-                if targetPed and targetPed ~= 0 and targetPed ~= ped and DoesEntityExist(targetPed) then
-                    local targetPos = GetEntityCoords(targetPed)
-                    local dist = #(myPos - targetPos)
-                    if dist <= 100.0 then
-                        table.insert(players, {player = player, ped = targetPed, dist = dist})
-                    end
-                end
-            end
-            
-            -- Trier par distance (plus proche en premier pour meilleur suivi)
-            table.sort(players, function(a, b) return a.dist < b.dist end)
-            
-            -- Rendre les joueurs triÃ©s
-            for _, data in ipairs(players) do
-                RenderPedESP(data.ped, data.player, espSettings, screenW, screenH, myPos)
-            end
-            
-            -- Nettoyer le cache pÃ©riodiquement
-            local currentTime = GetGameTimer() or 0
-            if currentTime - ESPCacheTime > 1000 then
-                ESPCacheTime = currentTime
-                for k, v in pairs(ESPCache) do
-                    if v.time and (currentTime - v.time) > 2000 then
-                        ESPCache[k] = nil
-                    end
-                end
-            end
-        end
-    else
-        Menu.PreventResetFrame = false
-    end
 end
 
 
 
-local function ToggleFullGodmode(enable)
-    if type(Susano) ~= "table" or type(Susano.InjectResource) ~= "function" then 
-        return 
-    end
-    
-    local code = string.format([[
-        local susano = rawget(_G, "Susano")
-        
-        if _G.FullGodmodeEnabled == nil then _G.FullGodmodeEnabled = false end
-        _G.FullGodmodeEnabled = %s
-        
-        if not _G.FullGodmodeHooksInstalled and susano and type(susano.HookNative) == "function" then
-            _G.FullGodmodeHooksInstalled = true
-            
-            susano.HookNative(0xFAEE099C6F890BB8, function(entity)
-                if _G.FullGodmodeEnabled and entity == PlayerPedId() then
-                    return false, false, false, false, false, false, false, false
-                end
-                return true
-            end)
-            
-            susano.HookNative(0x697157CED63F18D4, function(ped, damage, armorDamage)
-                if _G.FullGodmodeEnabled and ped == PlayerPedId() then
-                    return false
-                end
-                return true
-            end)
-            
-            susano.HookNative(0x6B76DC1F3AE6E6A3, function(entity, health)
-                if _G.FullGodmodeEnabled and entity == PlayerPedId() then
-                    local maxHealth = GetEntityMaxHealth(entity)
-                    if health < maxHealth then
-                        return false
-                    end
-                end
-                return true
-            end)
-            
-            susano.HookNative(0x7C6BCA42, function(ped)
-                if _G.FullGodmodeEnabled and ped == PlayerPedId() then
-                    return false
-                end
-                return true
-            end)
-        end
-        
-        if not _G.FullGodmodeLoopStarted then
-            _G.FullGodmodeLoopStarted = true
-
-            Citizen.CreateThread(function()
-                while true do
-                    Wait(0)
-                    if _G.FullGodmodeEnabled then
-                        local ped = PlayerPedId()
-                        if DoesEntityExist(ped) then
-                            local maxHealth = GetEntityMaxHealth(ped)
-                            SetEntityHealth(ped, maxHealth)
-                        end
-                    end
-                end
-            end)
-        end
-    ]], tostring(enable))
-
-    Susano.InjectResource("any", code)
-end
-
-local function ToggleSemiGodmode(enable)
-    if type(Susano) ~= "table" or type(Susano.InjectResource) ~= "function" then
-        return
-    end
-
-    local code = string.format([[
-        local susano = rawget(_G, "Susano")
-
-        if _G.SemiGodmodeEnabled == nil then _G.SemiGodmodeEnabled = false end
-        _G.SemiGodmodeEnabled = %s
-
-        if not _G.SemiGodmodeHooksInstalled and susano and type(susano.HookNative) == "function" then
-            _G.SemiGodmodeHooksInstalled = true
-
-            susano.HookNative(0xFAEE099C6F890BB8, function(entity)
-                if _G.SemiGodmodeEnabled and entity == PlayerPedId() then
-                    return false, false, false, false, false, false, false, false
-                end
-                return true
-            end)
-
-            susano.HookNative(0x697157CED63F18D4, function(ped, damage, armorDamage)
-                if _G.SemiGodmodeEnabled and ped == PlayerPedId() then
-                    return false
-                end
-                return true
-            end)
-
-            susano.HookNative(0x6B76DC1F3AE6E6A3, function(entity, health)
-                if _G.SemiGodmodeEnabled and entity == PlayerPedId() then
-                    local maxHealth = GetEntityMaxHealth(entity)
-                    if health < maxHealth then
-                        return false
-                    end
-                end
-                return true
-            end)
-
-            susano.HookNative(0x7C6BCA42, function(ped)
-                if _G.SemiGodmodeEnabled and ped == PlayerPedId() then
-                    return false
-                end
-                return true
-            end)
-        end
-
-        if not _G.SemiGodmodeLoopStarted then
-            _G.SemiGodmodeLoopStarted = true
-            _G.LastHealth = nil
-            
-            if susano and type(susano.HookNative) == "function" then
-                susano.HookNative(0xFAEE099C6F890BB8, function(entity)
-                    if _G.SemiGodmodeEnabled and entity == PlayerPedId() then
-                        return false, false, false, false, false, false, false, false
-                    end
-                    return true
-                end)
-            end
-            
-            Citizen.CreateThread(function()
-                while true do
-                    Wait(200)
-                    if _G.SemiGodmodeEnabled then
-                        local ped = PlayerPedId()
-                        if not DoesEntityExist(ped) then goto continue end
-                        
-                        local currentHealth = GetEntityHealth(ped)
-                        local maxHealth = GetEntityMaxHealth(ped)
-                        
-                        if currentHealth < maxHealth then
-                            local regenAmount = math.min(3, maxHealth - currentHealth)
-                            SetEntityHealth(ped, currentHealth + regenAmount)
-                        end
-                        
-                        
-                        if math.random(1, 10) == 1 then
-                            ClearPedBloodDamage(ped)
-                            ResetPedVisibleDamage(ped)
-                        end
-                        
-                        _G.LastHealth = currentHealth
-                        
-                        ::continue::
-                    end
-                end
-            end)
-            
-            Citizen.CreateThread(function()
-                while true do
-                    Wait(10)
-                    if _G.SemiGodmodeEnabled then
-                        local ped = PlayerPedId()
-                        if not DoesEntityExist(ped) then goto continue end
-                        
-                        local currentHealth = GetEntityHealth(ped)
-                        local maxHealth = GetEntityMaxHealth(ped)
-                        
-                        if _G.LastHealth and currentHealth < _G.LastHealth then
-                            local damageTaken = _G.LastHealth - currentHealth
-                            if damageTaken > 10 then
-                                SetEntityHealth(ped, maxHealth)
-                            elseif damageTaken > 5 then
-                                local regenAmount = math.min(20, maxHealth - currentHealth)
-                                SetEntityHealth(ped, currentHealth + regenAmount)
-                            end
-                        end
-                        
-                        if currentHealth < (maxHealth * 0.8) then
-                            local regenAmount = math.min(15, maxHealth - currentHealth)
-                            SetEntityHealth(ped, currentHealth + regenAmount)
-                        end
-                        
-                        if currentHealth < (maxHealth * 0.5) then
-                            SetEntityHealth(ped, maxHealth)
-                        end
-                        
-                        _G.LastHealth = currentHealth
-                        
-                        ::continue::
-                    end
-                end
-            end)
-        end
-    ]], tostring(enable))
-    
-    Susano.InjectResource("any", code)
-end
-
+-- [REMOVED] ToggleFullGodmode (menu item deleted)
+-- [REMOVED] ToggleSemiGodmode (menu item deleted)
 local function SetEntityScale(entity, scale)
     if _G.SetEntityScale then
         return _G.SetEntityScale(entity, scale)
@@ -5238,99 +4906,13 @@ end
 
 
 
-Actions.godmodeItem = FindItem("Player", "Self", "Godmode")
-if Actions.godmodeItem then
-    Actions.godmodeItem.onClick = function(value)
-        ToggleFullGodmode(value)
-        if value then
-            StealthAcquire("god"); _Stealth.invincible = true; _Stealth.health = true
-            StealthAcquire("ac")
-        else
-            StealthRelease("god")
-            if _Stealth._godUsers <= 0 then _Stealth.invincible = false; _Stealth.health = false end
-            StealthRelease("ac")
-        end
-    end
-end
-
-Actions.semiGodmodeItem = FindItem("Player", "Self", "Semi Godmode")
-if Actions.semiGodmodeItem then
-    Actions.semiGodmodeItem.onClick = function(value)
-        ToggleSemiGodmode(value)
-        if value then
-            StealthAcquire("god"); _Stealth.invincible = true; _Stealth.health = true
-            StealthAcquire("ac")
-        else
-            StealthRelease("god")
-            if _Stealth._godUsers <= 0 then _Stealth.invincible = false; _Stealth.health = false end
-            StealthRelease("ac")
-        end
-    end
+-- [REMOVED] Actions.godmodeItem handler (menu item deleted)
+-- [REMOVED] Actions.semiGodmodeItem handler (menu item deleted)
+-- [REMOVED] Actions.antiHeadshotItem handler (menu item deleted)
 end
 
 
-Actions.antiHeadshotItem = FindItem("Player", "Self", "Anti Headshot")
-if Actions.antiHeadshotItem then
-    Actions.antiHeadshotItem.onClick = function(value)
-        ToggleAntiHeadshot(value)
-    end
-end
-
-
-Actions.noclipItem = FindItem("Player", "Movement", "Noclip")
-if Actions.noclipItem then
-    Actions.noclipItem.onClick = function(value)
-        local speed = Actions.noclipItem.sliderValue or 1.0
-        
-        if value then
-            StealthAcquire("speed"); StealthAcquire("ac")
-            if noclipType == "normal" then
-                ToggleNoclipStaff(false)
-                Wait(50)
-                ToggleNoclip(true, speed)
-            else
-                ToggleNoclip(false, speed)
-                Wait(50)
-                ToggleNoclipStaff(true)
-            end
-        else
-            StealthRelease("speed"); StealthRelease("ac")
-            if noclipType == "normal" then
-                ToggleNoclip(false, speed)
-            else
-                ToggleNoclipStaff(false)
-            end
-        end
-        
-        lastNoclipSpeed = speed
-    end
-end
-
-Actions.noclipTypeItem = FindItem("Player", "Movement", "NoClip Type")
-if Actions.noclipTypeItem then
-    Actions.noclipTypeItem.onClick = function(index, option)
-        local oldType = noclipType
-        noclipType = option
-        
-        if Actions.noclipItem and Actions.noclipItem.value then
-            local speed = Actions.noclipItem.sliderValue or 1.0
-            
-            if oldType == "normal" then
-                ToggleNoclip(false, speed)
-            else
-                ToggleNoclipStaff(false)
-            end
-            
-            Wait(100)
-            
-            if noclipType == "normal" then
-                ToggleNoclip(true, speed)
-            else
-                ToggleNoclipStaff(true)
-            end
-        end
-    end
-end
+-- [REMOVED] Noclip + NoclipType handlers (Movement tab deleted)
 
 Actions.tpAllVehiclesItem = FindItem("Player", "Self", "TP all vehicle to me")
 if Actions.tpAllVehiclesItem then
@@ -5346,36 +4928,7 @@ if Actions.reviveItem then
     end
 end
 
-Actions.maxHealthItem = FindItem("Player", "Self", "Max Health")
-if Actions.maxHealthItem then
-    Actions.maxHealthItem.onClick = function()
-        _Stealth.health = true; _Stealth.blockAC = true
-        Menu.ActionMaxHealth()
-        Citizen.SetTimeout(2000, function()
-            if _Stealth._godUsers <= 0 then _Stealth.health = false end
-            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
-        end)
-    end
-end
-
-Actions.maxArmorItem = FindItem("Player", "Self", "Max Armor")
-if Actions.maxArmorItem then
-    Actions.maxArmorItem.onClick = function()
-        _Stealth.blockAC = true
-        Menu.ActionMaxArmor()
-        Citizen.SetTimeout(2000, function()
-            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
-        end)
-    end
-end
-
-Actions.detachItem = FindItem("Player", "Self", "Detach All Entitys")
-if Actions.detachItem then
-    Actions.detachItem.onClick = function()
-        Menu.ActionDetachAllEntitys()
-    end
-end
-
+-- [REMOVED] Actions.maxHealthItem handler (menu item deleted)
 Actions.soloSessionItem = FindItem("Player", "Self", "Solo Session")
 if Actions.soloSessionItem then
     Actions.soloSessionItem.onClick = function(value)
@@ -5392,20 +4945,8 @@ end
 
 
 
-Actions.fastRunItem = FindItem("Player", "Movement", "Fast Run")
-if Actions.fastRunItem then
-    Actions.fastRunItem.onClick = function(value)
-        ToggleFastRun(value)
-        if value then StealthAcquire("speed") else StealthRelease("speed") end
-    end
-end
-
-
-Actions.noRagdollItem = FindItem("Player", "Movement", "No Ragdoll")
-if Actions.noRagdollItem then
-    Actions.noRagdollItem.onClick = function(value)
-        ToggleNoRagdoll(value)
-    end
+-- [REMOVED] Actions.fastRunItem handler (menu item deleted)
+-- [REMOVED] Actions.noRagdollItem handler (menu item deleted)
 end
 
 
@@ -5416,12 +4957,7 @@ if Actions.tinyPlayerItem then
     end
 end
 
-Actions.infiniteStaminaItem = FindItem("Player", "Self", "Infinite Stamina")
-if Actions.infiniteStaminaItem then
-    Actions.infiniteStaminaItem.onClick = function(value)
-        ToggleInfiniteStamina(value)
-        _Stealth.stamina = value
-    end
+-- [REMOVED] Actions.infiniteStaminaItem handler (menu item deleted)
 end
 
 
@@ -7322,22 +6858,7 @@ local function ToggleFreecam(enable, speed)
     end
 end
 
-Actions.freecamItem = FindItem("Player", "Movement", "Freecam")
-if Actions.freecamItem then
-    Actions.freecamItem.onClick = function(value)
-        local speed = Actions.freecamItem.sliderValue or 0.5
-        ToggleFreecam(value, speed)
-        if value then StealthAcquire("ac") else StealthRelease("ac") end
-    end
-    
-    Actions.freecamItem.onSliderChange = function(value)
-        if Actions.freecamItem.value then
-            freecamSpeed = value
-            normal_speed = value
-            fast_speed = value * 5.0
-        end
-            end
-        end
+-- [REMOVED] Freecam handler (Movement tab deleted)
 
 Citizen.CreateThread(function()
     while true do
@@ -12046,11 +11567,7 @@ do
     end
 end
 
-    Actions.cagePlayerItem = FindItem("Online", "Troll", "Cage Player")
-    if Actions.cagePlayerItem then
-        Actions.cagePlayerItem.onClick = function()
-            Menu.ActionCagePlayer()
-        end
+-- [REMOVED] Actions.cagePlayerItem handler (menu item deleted)
     end
 
     Actions.ramPlayerItem = FindItem("Online", "Troll", "Ram Player")
@@ -12417,17 +11934,7 @@ if Actions.ragdollItem then
     end
 end
 
-Actions.pedArmedItem = FindItem("Online", "Troll", "Ped Armed")
-if Actions.pedArmedItem then
-    Actions.pedArmedItem.onClick = function(index, option)
-        _Stealth.blockAC = true
-        Menu.ActionPedArmed()
-        Citizen.SetTimeout(5000, function()
-            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
-        end)
-    end
-end
-
+-- [REMOVED] Actions.pedArmedItem handler (menu item deleted)
 Actions.airstrikeItem = FindItem("Online", "Troll", "Airstrike")
 if Actions.airstrikeItem then
     Actions.airstrikeItem.onClick = function(index, option)
@@ -13768,31 +13275,11 @@ function Menu.SpawnGiantProp(model, coords, heading, freeze)
 end
 
 -- Giant Prop selector
-Actions.giantPropSelector = FindItem("World", nil, "Giant Prop")
-if Actions.giantPropSelector then
-    Actions.giantPropSelector.onClick = function(index, option)
-        if option then Menu.SelectedGiantProp = option end
-    end
-end
-
+-- [REMOVED] Actions.giantPropSelector handler (menu item deleted)
 -- Spawn at player pos
-Actions.spawnPropHere = FindItem("World", nil, "Spawn Prop Here")
-if Actions.spawnPropHere then
-    Actions.spawnPropHere.onClick = function()
-        local model = GiantPropModels[Menu.SelectedGiantProp]
-        if not model then return end
-        local ped = PlayerPedId()
-        local coords = GetEntityCoords(ped)
-        local heading = GetEntityHeading(ped)
-        local fwd = GetEntityForwardVector(ped)
-        local spawnPos = vector3(coords.x + fwd.x * 5.0, coords.y + fwd.y * 5.0, coords.z)
-        Menu.SpawnGiantProp(model, spawnPos, heading, true)
-    end
-end
-
+-- [REMOVED] Actions.spawnPropHere handler (menu item deleted)
 -- Spawn at target pos
-Actions.spawnPropTarget = FindItem("World", nil, "Spawn Prop at Target")
-if Actions.spawnPropTarget then
+-- [REMOVED] Actions.spawnPropTarget handler (menu item deleted)
     Actions.spawnPropTarget.onClick = function()
         if not Menu.SelectedPlayer then return end
         local model = GiantPropModels[Menu.SelectedGiantProp]
@@ -13813,38 +13300,11 @@ if Actions.spawnPropTarget then
 end
 
 -- Delete last prop
-Actions.deleteLastProp = FindItem("World", nil, "Delete Last Prop")
-if Actions.deleteLastProp then
-    Actions.deleteLastProp.onClick = function()
-        local store = _G._giantPropsStore
-        if store and #store > 0 then
-            local obj = store[#store]
-            if obj and DoesEntityExist(obj) then
-                SetEntityAsMissionEntity(obj, true, true)
-                DeleteEntity(obj)
-            end
-            store[#store] = nil
-        end
-    end
+-- [REMOVED] Actions.deleteLastProp handler (menu item deleted)
 end
 
 -- Delete all giant props
-Actions.deleteAllGiantProps = FindItem("World", nil, "Delete All Giant Props")
-if Actions.deleteAllGiantProps then
-    Actions.deleteAllGiantProps.onClick = function()
-        local store = _G._giantPropsStore
-        if store then
-            for i = #store, 1, -1 do
-                local obj = store[i]
-                if obj and DoesEntityExist(obj) then
-                    SetEntityAsMissionEntity(obj, true, true)
-                    DeleteEntity(obj)
-                end
-            end
-        end
-        _G._giantPropsStore = {}
-        print("[GiantProp] All props deleted")
-    end
+-- [REMOVED] Actions.deleteAllGiantProps handler (menu item deleted)
 end
 
 -- ============================================
@@ -14355,7 +13815,7 @@ local function SpawnTubeProp(model, coords, heading)
         return 0
     end
 
-    local obj = CreateObject(hash, coords.x, coords.y, coords.z, false, false, false)
+    local obj = CreateObject(hash, coords.x, coords.y, coords.z, true, true, false)
     if obj and obj ~= 0 and DoesEntityExist(obj) then
         SetEntityAsMissionEntity(obj, true, true)
         SetEntityHeading(obj, heading or 0.0)
@@ -14401,7 +13861,7 @@ function Menu.ActionTrappedInTube()
     if not HasModelLoaded(hash) then return end
 
     -- Spawn le tube directement sur le joueur
-    local obj = CreateObject(hash, tc.x, tc.y, tc.z - 1.0, false, false, false)
+    local obj = CreateObject(hash, tc.x, tc.y, tc.z - 1.0, true, true, false)
     if obj and obj ~= 0 and DoesEntityExist(obj) then
         SetEntityAsMissionEntity(obj, true, true)
         -- Rotation X=90° : tube posé à l'horizontale autour du joueur
@@ -14487,7 +13947,7 @@ function Menu.ActionAttachToilet()
     end
 
     local tc = GetEntityCoords(targetPed)
-    local obj = CreateObject(hash, tc.x, tc.y, tc.z + 1.0, false, false, false)
+    local obj = CreateObject(hash, tc.x, tc.y, tc.z + 1.0, true, true, false)
 
     if not obj or obj == 0 or not DoesEntityExist(obj) then
         SetModelAsNoLongerNeeded(hash)
