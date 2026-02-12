@@ -13847,13 +13847,12 @@ if Actions.deleteAllGiantProps then
 end
 
 -- ============================================
--- BUGGY RAMP (Metal Ramp Only)
+-- BUGGY RAMP (Dynamic Positioning)
 -- ============================================
 _G._buggyRampHandle = nil
 _G._buggyRampVeh = nil
 _G._buggyRampThread = false
 
--- Modèle principal + fallback si bugué
 local RAMP_MODEL_PRIMARY  = "prop_mp_ramp_01"
 local RAMP_MODEL_FALLBACK = "lts_prop_lts_ramp_01"
 
@@ -13867,7 +13866,14 @@ function Menu.AttachBuggyRamp()
         return
     end
 
-    -- Essai modèle principal, fallback si échec
+    -- Calcul dynamique de la longueur du véhicule
+    local vehModel = GetEntityModel(veh)
+    local vMin, vMax = GetModelDimensions(vehModel)
+    -- max.y = distance du centre à l'avant du véhicule
+    local frontOffset = vMax.y + 1.0
+    print("[BuggyRamp] Vehicle max.y=" .. string.format("%.2f", vMax.y) .. " → ramp Y offset=" .. string.format("%.2f", frontOffset))
+
+    -- Chargement modèle : primary, puis fallback
     local model = RAMP_MODEL_PRIMARY
     local hash = GetHashKey(model)
     RequestModel(hash)
@@ -13875,7 +13881,7 @@ function Menu.AttachBuggyRamp()
     while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
 
     if not HasModelLoaded(hash) then
-        print("[BuggyRamp] Primary model failed, trying fallback")
+        print("[BuggyRamp] Primary failed, trying fallback")
         model = RAMP_MODEL_FALLBACK
         hash = GetHashKey(model)
         RequestModel(hash)
@@ -13887,8 +13893,9 @@ function Menu.AttachBuggyRamp()
         end
     end
 
+    -- Spawn networked (true) pour que les autres joueurs voient l'effet
     local vehCoords = GetEntityCoords(veh)
-    local obj = CreateObject(hash, vehCoords.x, vehCoords.y, vehCoords.z + 3.0, false, false, false)
+    local obj = CreateObject(hash, vehCoords.x, vehCoords.y, vehCoords.z + 3.0, true, true, false)
 
     if not obj or obj == 0 or not DoesEntityExist(obj) then
         SetModelAsNoLongerNeeded(hash)
@@ -13897,34 +13904,33 @@ function Menu.AttachBuggyRamp()
 
     SetEntityAsMissionEntity(obj, true, true)
 
-    -- Offsets relatifs au véhicule :
-    --   X = latéral, Y = longitudinal (avant), Z = vertical
-    -- Y = 4.5 → rampe entièrement devant le pare-chocs, pas de collision moteur
-    -- Z = -0.75 → base proche du bitume
-    -- rotZ = 180.0 → rampe orientée face à la route
+    -- Attachement dynamique :
+    --   X = 0.0       → centré latéralement
+    --   Y = max.y+1.0 → entièrement devant le pare-chocs (dynamique par véhicule)
+    --   Z = 0.05      → au niveau du châssis, légèrement au-dessus pour ne pas s'enfoncer
+    --   rotZ = 180.0  → rampe orientée face à la route
     AttachEntityToEntity(
         obj, veh,
-        0,                      -- bone 0 = chassis
-        0.0, 4.5, -0.75,       -- X=centré, Y=4.5 devant, Z=-0.75 bas
-        0.0, 0.0, 180.0,       -- rotX, rotY, rotZ=180 face route
+        0,                          -- bone 0 = chassis
+        0.0, frontOffset, 0.05,     -- X, Y(dynamique), Z(niveau châssis)
+        0.0, 0.0, 180.0,           -- rotX, rotY, rotZ
         false,  -- p9
         true,   -- useSoftPinning
-        true,   -- collision ON (les autres véhicules montent dessus)
+        true,   -- collision avec le monde ON
         false,  -- isPed
         0,      -- vertexIndex
         true    -- fixedRot
     )
 
-    -- Force la rampe à se poser sur le sol correctement
-    PlaceObjectOnGroundProperly(obj)
-
-    -- Collision avec le monde, MAIS désactiver collision interne véhicule<>rampe
-    -- Empêche le véhicule de sauter/s'envoler à cause du conflit de collision
+    -- Collision avec le monde (autres véhicules montent dessus)
     SetEntityCollision(obj, true, true)
-    SetEntityNoCollisionEntity(obj, veh, false)
-    SetEntityNoCollisionEntity(veh, obj, false)
 
-    -- Invincibilité rampe + véhicule
+    -- Désactiver collision interne véhicule <> rampe
+    -- true = persistant (ne se reset pas)
+    SetEntityNoCollisionEntity(veh, obj, true)
+    SetEntityNoCollisionEntity(obj, veh, true)
+
+    -- Invincibilité
     SetEntityInvincible(obj, true)
     SetEntityInvincible(veh, true)
     SetEntityProofs(obj, true, true, true, true, true, true, true, true)
@@ -13935,9 +13941,9 @@ function Menu.AttachBuggyRamp()
     _G._buggyRampHandle = obj
     _G._buggyRampVeh = veh
     SetModelAsNoLongerNeeded(hash)
-    print("[BuggyRamp] Attached " .. model .. " to vehicle " .. tostring(veh))
+    print("[BuggyRamp] Attached " .. model .. " Y=" .. string.format("%.2f", frontOffset) .. " Z=0.05")
 
-    -- Thread maintenance : auto-repair + re-apply NoCollision
+    -- Thread maintenance
     _G._buggyRampThread = true
     Citizen.CreateThread(function()
         while _G._buggyRampThread do
@@ -13953,9 +13959,8 @@ function Menu.AttachBuggyRamp()
                     SetVehicleEngineOn(v, true, true, false)
                 end
                 SetVehicleCanBeVisiblyDamaged(v, false)
-                -- Re-enforce no-collision interne chaque tick
-                SetEntityNoCollisionEntity(r, v, false)
-                SetEntityNoCollisionEntity(v, r, false)
+                SetEntityNoCollisionEntity(r, v, true)
+                SetEntityNoCollisionEntity(v, r, true)
             end
             Citizen.Wait(500)
         end
