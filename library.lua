@@ -122,38 +122,32 @@ function Menu.LoadBannerTexture(url)
 end
 
 Menu.Colors = {
-    HeaderPink = { r = 65, g = 105, b = 170 },
-    SelectedBg = { r = 65, g = 105, b = 170 },
+    HeaderPink = { r = 0, g = 100, b = 200 },
+    SelectedBg = { r = 0, g = 100, b = 200 },
     TextWhite = { r = 255, g = 255, b = 255 },
-    BackgroundDark = { r = 0, g = 0, b = 0 },
-    FooterBlack = { r = 0, g = 0, b = 0 }
+    BackgroundDark = { r = 35, g = 35, b = 40 },
+    FooterBlack = { r = 20, g = 20, b = 25 }
 }
 
 function Menu.ApplyTheme(themeName)
     if themeName == "Korium" or themeName == "Blue" then
-        Menu.Colors.HeaderPink = { r = 65, g = 105, b = 170 }
-        Menu.Colors.SelectedBg = { r = 65, g = 105, b = 170 }
-        Menu.Banner.imageUrl = "https://i.imgur.com/xv46Mbz.png"
+        Menu.Colors.HeaderPink = { r = 0, g = 100, b = 200 }
+        Menu.Colors.SelectedBg = { r = 0, g = 100, b = 200 }
     elseif themeName == "Green" then
         Menu.Colors.HeaderPink = { r = 76, g = 143, b = 88 }
         Menu.Colors.SelectedBg = { r = 76, g = 143, b = 88 }
-        Menu.Banner.imageUrl = "https://i.imgur.com/xv46Mbz.png"
     elseif themeName == "Red" then
-        Menu.Colors.HeaderPink = { r = 255, g = 0, b = 0 }
-        Menu.Colors.SelectedBg = { r = 255, g = 0, b = 0 }
-        Menu.Banner.imageUrl = "https://i.imgur.com/xv46Mbz.png"
+        Menu.Colors.HeaderPink = { r = 200, g = 30, b = 30 }
+        Menu.Colors.SelectedBg = { r = 200, g = 30, b = 30 }
     elseif themeName == "Purple" then
-        Menu.Colors.HeaderPink = { r = 148, g = 0, b = 211 }
-        Menu.Colors.SelectedBg = { r = 148, g = 0, b = 211 }
-        Menu.Banner.imageUrl = "https://i.imgur.com/xv46Mbz.png"
+        Menu.Colors.HeaderPink = { r = 130, g = 0, b = 200 }
+        Menu.Colors.SelectedBg = { r = 130, g = 0, b = 200 }
     elseif themeName == "White" then
         Menu.Colors.HeaderPink = { r = 180, g = 180, b = 190 }
         Menu.Colors.SelectedBg = { r = 180, g = 180, b = 190 }
-        Menu.Banner.imageUrl = "https://i.imgur.com/xv46Mbz.png"
     else
-        Menu.Colors.HeaderPink = { r = 65, g = 105, b = 170 }
-        Menu.Colors.SelectedBg = { r = 65, g = 105, b = 170 }
-        Menu.Banner.imageUrl = "https://i.imgur.com/xv46Mbz.png"
+        Menu.Colors.HeaderPink = { r = 0, g = 100, b = 200 }
+        Menu.Colors.SelectedBg = { r = 0, g = 100, b = 200 }
     end
 
     if Menu.Banner.enabled and Menu.Banner.imageUrl then
@@ -415,17 +409,12 @@ function Menu.DrawTabs(category, x, startY, width, tabHeight)
             local baseG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.41
             local baseB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 0.67
 
-            -- Korium: solid tab selector
+            -- Korium: flat tab fill 50% + bottom accent
             if Susano and Susano.DrawRectFilled then
-                Susano.DrawRectFilled(drawX, startY, drawWidth, tabHeight, baseR, baseG, baseB, 0.85, 0.0)
-            else
-                Menu.DrawRect(drawX, startY, drawWidth, tabHeight, baseR * 255, baseG * 255, baseB * 255, 217)
-            end
-
-            -- Bottom accent line (2px)
-            if Susano and Susano.DrawRectFilled then
+                Susano.DrawRectFilled(drawX, startY, drawWidth, tabHeight, baseR, baseG, baseB, 0.50, 0.0)
                 Susano.DrawRectFilled(drawX, startY + tabHeight - 2, drawWidth, 2, baseR, baseG, baseB, 1.0, 0)
             else
+                Menu.DrawRect(drawX, startY, drawWidth, tabHeight, baseR * 255, baseG * 255, baseB * 255, 128)
                 Menu.DrawRect(drawX, startY + tabHeight - 2, drawWidth, 2, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
             end
         end
@@ -538,32 +527,28 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         
         local drawY = Menu.SelectorY
 
-        local baseR = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.r) and (Menu.Colors.SelectedBg.r / 255.0) or 0.25
-        local baseG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.41
-        local baseB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 0.67
+        local baseR = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.r) and (Menu.Colors.SelectedBg.r / 255.0) or 0.0
+        local baseG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.39
+        local baseB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 0.78
 
         local selectorX = x
         local selectorW = width - 1
 
-        -- Korium: solid selection bar, high opacity, subtle left-to-right fade at tail
+        -- Korium: flat solid fill at 50% alpha
         if Susano and Susano.DrawRectFilled then
-            -- Main solid bar (90% of width, full opacity)
-            local solidW = selectorW * 0.85
-            Susano.DrawRectFilled(selectorX, drawY, solidW, itemHeight, baseR, baseG, baseB, 0.92, 0.0)
-            -- Tail fade (last 15%)
-            local fadeSteps = 20
-            local fadeW = selectorW - solidW
-            local stepW = fadeW / fadeSteps
-            for i = 0, fadeSteps - 1 do
-                local a = 0.92 * (1.0 - (i / fadeSteps))
-                Susano.DrawRectFilled(selectorX + solidW + i * stepW, drawY, stepW + 1, itemHeight, baseR, baseG, baseB, a, 0.0)
-            end
+            Susano.DrawRectFilled(selectorX, drawY, selectorW, itemHeight, baseR, baseG, baseB, 0.50, 0.0)
+            -- White border outline (1px)
+            Susano.DrawRectFilled(selectorX, drawY, selectorW, 1, 1.0, 1.0, 1.0, 0.6, 0)           -- top
+            Susano.DrawRectFilled(selectorX, drawY + itemHeight - 1, selectorW, 1, 1.0, 1.0, 1.0, 0.6, 0) -- bottom
+            Susano.DrawRectFilled(selectorX, drawY, 1, itemHeight, 1.0, 1.0, 1.0, 0.6, 0)           -- left
+            Susano.DrawRectFilled(selectorX + selectorW - 1, drawY, 1, itemHeight, 1.0, 1.0, 1.0, 0.6, 0) -- right
         else
-            Menu.DrawRect(selectorX, drawY, selectorW, itemHeight, baseR * 255, baseG * 255, baseB * 255, 235)
+            Menu.DrawRect(selectorX, drawY, selectorW, itemHeight, baseR * 255, baseG * 255, baseB * 255, 128)
+            Menu.DrawRect(selectorX, drawY, selectorW, 1, 255, 255, 255, 153)
+            Menu.DrawRect(selectorX, drawY + itemHeight - 1, selectorW, 1, 255, 255, 255, 153)
+            Menu.DrawRect(selectorX, drawY, 1, itemHeight, 255, 255, 255, 153)
+            Menu.DrawRect(selectorX + selectorW - 1, drawY, 1, itemHeight, 255, 255, 255, 153)
         end
-
-        -- Left accent bar (3px)
-        Menu.DrawRect(selectorX, drawY, 3, itemHeight, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
     end
 
     local textX = x + 16
@@ -980,23 +965,20 @@ function Menu.DrawCategories()
                 local selectorX = x
                 local selectorW = width - 1
 
-                -- Korium: solid bar with subtle right fade
+                -- Korium: flat fill 50% alpha + white border
                 if Susano and Susano.DrawRectFilled then
-                    local solidW = selectorW * 0.85
-                    Susano.DrawRectFilled(selectorX, drawY, solidW, itemHeight, baseR, baseG, baseB, 0.92, 0.0)
-                    local fadeSteps = 20
-                    local fadeW = selectorW - solidW
-                    local stepW = fadeW / fadeSteps
-                    for fi = 0, fadeSteps - 1 do
-                        local a = 0.92 * (1.0 - (fi / fadeSteps))
-                        Susano.DrawRectFilled(selectorX + solidW + fi * stepW, drawY, stepW + 1, itemHeight, baseR, baseG, baseB, a, 0.0)
-                    end
+                    Susano.DrawRectFilled(selectorX, drawY, selectorW, itemHeight, baseR, baseG, baseB, 0.50, 0.0)
+                    Susano.DrawRectFilled(selectorX, drawY, selectorW, 1, 1.0, 1.0, 1.0, 0.6, 0)
+                    Susano.DrawRectFilled(selectorX, drawY + itemHeight - 1, selectorW, 1, 1.0, 1.0, 1.0, 0.6, 0)
+                    Susano.DrawRectFilled(selectorX, drawY, 1, itemHeight, 1.0, 1.0, 1.0, 0.6, 0)
+                    Susano.DrawRectFilled(selectorX + selectorW - 1, drawY, 1, itemHeight, 1.0, 1.0, 1.0, 0.6, 0)
                 else
-                    Menu.DrawRect(selectorX, drawY, selectorW, itemHeight, baseR * 255, baseG * 255, baseB * 255, 235)
+                    Menu.DrawRect(selectorX, drawY, selectorW, itemHeight, baseR * 255, baseG * 255, baseB * 255, 128)
+                    Menu.DrawRect(selectorX, drawY, selectorW, 1, 255, 255, 255, 153)
+                    Menu.DrawRect(selectorX, drawY + itemHeight - 1, selectorW, 1, 255, 255, 255, 153)
+                    Menu.DrawRect(selectorX, drawY, 1, itemHeight, 255, 255, 255, 153)
+                    Menu.DrawRect(selectorX + selectorW - 1, drawY, 1, itemHeight, 255, 255, 255, 153)
                 end
-
-                -- Left accent bar
-                Menu.DrawRect(selectorX, drawY, 3, itemHeight, Menu.Colors.SelectedBg.r, Menu.Colors.SelectedBg.g, Menu.Colors.SelectedBg.b, 255)
             end
 
             -- Category text (icon is drawn by loader patch)
@@ -1550,8 +1532,9 @@ function Menu.DrawBackground()
     
     local itemsEndY = itemsY + itemsH
     
-    -- Korium: semi-transparent by default, opaque if "Black Background" is ON
-    local backgroundAlpha = 0.70
+    -- Korium: dark grey semi-transparent, opaque if "Black Background" ON
+    local backgroundAlpha = 0.78
+    local bgR, bgG, bgB = 0.137, 0.137, 0.157  -- dark grey (35, 35, 40)
     if Menu.Categories then
         for _, cat in ipairs(Menu.Categories) do
             if cat.name == "Settings" and cat.tabs then
@@ -1560,6 +1543,7 @@ function Menu.DrawBackground()
                         for _, item in ipairs(tab.items) do
                             if item.name == "Black Background" and item.value == true then
                                 backgroundAlpha = 1.0
+                                bgR, bgG, bgB = 0.0, 0.0, 0.0
                             end
                         end
                     end
@@ -1584,9 +1568,9 @@ function Menu.DrawBackground()
         end
         
         if Susano and Susano.DrawRectFilled then
-            Susano.DrawRectFilled(x, segY, width, segH, 0.0, 0.0, 0.0, alpha, 0)
+            Susano.DrawRectFilled(x, segY, width, segH, bgR, bgG, bgB, alpha, 0)
         else
-            Menu.DrawRect(x, segY, width, segH, 0, 0, 0, math.floor(alpha * 255))
+            Menu.DrawRect(x, segY, width, segH, math.floor(bgR * 255), math.floor(bgG * 255), math.floor(bgB * 255), math.floor(alpha * 255))
         end
     end
 
