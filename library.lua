@@ -160,7 +160,7 @@ Menu.Position = {
     itemHeight = 34,
     mainMenuHeight = 26,
     headerHeight = 100,
-    footerHeight = 26,
+    footerHeight = 35,
     footerSpacing = 5,
     mainMenuSpacing = 5,
     footerRadius = 4,
@@ -1016,7 +1016,6 @@ function Menu.DrawCategories()
     local startY = scaledPos.y + scaledPos.headerHeight
     local width = scaledPos.width
     local itemHeight = scaledPos.itemHeight
-    local mainMenuHeight = scaledPos.mainMenuHeight
     local mainMenuSpacing = scaledPos.mainMenuSpacing
 
     local totalCategories = #Menu.Categories - 1
@@ -1135,7 +1134,7 @@ function Menu.DrawCategories()
             local category = Menu.Categories[categoryIndex]
             local isSelected = (categoryIndex == Menu.CurrentCategory)
 
-            local itemY = startY + mainMenuHeight + mainMenuSpacing + (displayIndex - 1) * itemHeight
+            local itemY = startY + (displayIndex - 1) * itemHeight
             Menu.DrawRect(x, itemY, width, itemHeight, Menu.Colors.BackgroundDark.r, Menu.Colors.BackgroundDark.g, Menu.Colors.BackgroundDark.b, 50)
 
             if isSelected then
@@ -1253,7 +1252,7 @@ function Menu.DrawCategories()
     end
 
     if totalCategories > 0 then
-        local scrollbarStartY = startY + mainMenuHeight + mainMenuSpacing
+        local scrollbarStartY = startY
         Menu.DrawScrollbar(x, scrollbarStartY, visibleHeight, Menu.CurrentCategory, totalCategories, true, width)
     end
 end
