@@ -88,7 +88,7 @@ LibraryCode = string.gsub(
 LibraryCode = string.gsub(
     LibraryCode,
     'local footerText = "BusDansTete X Juro"',
-    'local footerText = Menu.FooterText or "Dynasty"'
+    'local footerText = Menu.FooterText or "Private Menu"'
 )
 
 -- Inject logo drawing right after footer left-text rendering
@@ -135,7 +135,7 @@ end
 -- Cache for category icon textures loaded from URLs
 Menu.IconTextures = {}
 Menu.FooterLogoTex = nil
-Menu.FooterText = "Dynasty" -- <<< CHANGE THIS to your menu name
+Menu.FooterText = "Private Menu" -- <<< CHANGE THIS to your menu name
 
 -- Footer logo URL (small square image, ideally 64x64 or 128x128 PNG)
 Menu.FooterLogoUrl = "https://i.imgur.com/oMBxLZD.png" -- <<< REPLACE with your logo URL
@@ -14141,3 +14141,4 @@ if Actions.clearAllAttachedItem then
         Menu.ClearAllAttachedProps()
     end
 end
+
