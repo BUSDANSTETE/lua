@@ -28,6 +28,9 @@ if string.find(LibraryCode, "Susano%.ResetFrame") then
     LibraryCode = string.gsub(LibraryCode, "if Susano%.ResetFrame then", "if Susano.ResetFrame and not Menu.PreventResetFrame then")
 end
 
+-- Strip \r from HTTP content for consistent pattern matching
+LibraryCode = string.gsub(LibraryCode, "\r", "")
+
 -- Patch tag display [RISK] (red) / [DYNASTY] (purple) (item name rendering)
 LibraryCode = string.gsub(
     LibraryCode,
@@ -36,13 +39,17 @@ LibraryCode = string.gsub(
 )
 
 -- ============================================
--- PATCH: Category icon image (small, 42% of itemHeight)
+-- PATCH: Category icon image + bold text shadow
 -- ============================================
+-- Replaces category name rendering to:
+--   1. Draw icon texture (from iconUrl) left of text
+--   2. Add 1px shadow for bold effect
+--   3. Shift text right to make room for icon
 LibraryCode = string.gsub(
     LibraryCode,
     'Menu%.DrawText%(textX, textY, category%.name, 17, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
     [[do
-                local _iSz = itemHeight * 0.42
+                local _iSz = itemHeight * 0.7
                 local _iOk = false
                 if category.iconUrl and Menu.IconTextures and Menu.IconTextures[category.name] then
                     local _t = Menu.IconTextures[category.name]
@@ -53,22 +60,49 @@ LibraryCode = string.gsub(
                 end
                 local _offX = _iOk and (14 + _iSz + 8) or 16
                 textX = x + _offX
-                Menu.DrawText(textX, textY, category.name, 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
+                local _wr = Menu.Colors.TextWhite.r / 255.0
+                local _wg = Menu.Colors.TextWhite.g / 255.0
+                local _wb = Menu.Colors.TextWhite.b / 255.0
+                Menu.DrawText(textX, textY, category.name, 17, _wr, _wg, _wb, 1.0)
             end]]
 )
 
 -- ============================================
--- PATCH: Chevron >> right-aligned with measured width
+-- PATCH: Chevron >> replaced by clean >
 -- ============================================
 LibraryCode = string.gsub(
     LibraryCode,
     'local chevronX = x %+ width %- 22\n            Menu%.DrawText%(chevronX, textY, ">", 17, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
-    [[local _chTxt = ">>"
-            local _chSz = 14
-            local _chW = 18
-            if Susano and Susano.GetTextWidth then _chW = Susano.GetTextWidth(_chTxt, _chSz * (Menu.Scale or 1.0)) end
-            local chevronX = x + width - _chW - 16
-            Menu.DrawText(chevronX, textY, _chTxt, _chSz, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 0.5)]]
+    [[local chevronX = x + width - 36
+            local _wr2 = Menu.Colors.TextWhite.r / 255.0
+            local _wg2 = Menu.Colors.TextWhite.g / 255.0
+            local _wb2 = Menu.Colors.TextWhite.b / 255.0
+            Menu.DrawText(chevronX, textY, ">>", 14, _wr2, _wg2, _wb2, 0.55)]]
+)
+
+-- ============================================
+-- PATCH: Footer text + centered logo image
+-- ============================================
+-- Replace the hardcoded footer text with configurable Menu.FooterText
+-- and add centered logo drawing
+LibraryCode = string.gsub(
+    LibraryCode,
+    'local footerText = "BusDansTete X Juro"',
+    'local footerText = Menu.FooterText or "Dynasty"'
+)
+
+-- Inject logo drawing right after footer left-text rendering
+-- Match the unique line that draws the footer left text, then append logo code
+LibraryCode = string.gsub(
+    LibraryCode,
+    '(Menu%.DrawText%(currentX, footerTextY, footerText, footerSize, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%))',
+    [[%1
+    if Menu.FooterLogoTex and Menu.FooterLogoTex > 0 and Susano and Susano.DrawImage then
+        local _lSz = footerHeight * 0.7
+        local _lX = x + (footerWidth / 2) - (_lSz / 2)
+        local _lY = footerY + (footerHeight - _lSz) / 2
+        Susano.DrawImage(Menu.FooterLogoTex, _lX, _lY, _lSz, _lSz, 1, 1, 1, 1, 0)
+    end]]
 )
 
 local chunk, err = load(LibraryCode)
@@ -80,15 +114,16 @@ end
 local Menu = chunk()
 
 -- ============================================
--- BOLD TEXT: Global wrapper (shadow pass)
+-- BOLD TEXT: Override DrawText with shadow pass
 -- ============================================
--- Wraps Menu.DrawText to always draw 1px shadow → simulates bold
--- Menu._NoBold flag allows loading bar to skip bold temporarily
+-- Wraps Menu.DrawText to always draw a 1px dark shadow behind text
+-- This simulates bold/weight since Susano has no font-weight API
 Menu._OrigDrawText = Menu.DrawText
-Menu.BoldText = true
+Menu.BoldText = true -- set false to disable globally
 
 function Menu.DrawText(x, y, text, size_px, r, g, b, a)
-    if Menu.BoldText and not Menu._NoBold and a and a > 0.1 then
+    if Menu.BoldText and a and a > 0.1 then
+        -- Shadow pass: 1px right, black, 30% of original alpha
         Menu._OrigDrawText(x + 1, y, text, size_px, 0, 0, 0, (a or 1.0) * 0.3)
     end
     Menu._OrigDrawText(x, y, text, size_px, r, g, b, a)
@@ -97,15 +132,20 @@ end
 -- ============================================
 -- ICON TEXTURE SYSTEM
 -- ============================================
+-- Cache for category icon textures loaded from URLs
 Menu.IconTextures = {}
 Menu.FooterLogoTex = nil
-Menu.FooterText = "Dynasty"
-Menu.FooterLogoUrl = "https://i.imgur.com/oOp4BF9.jpeg"
+Menu.FooterText = "Dynasty" -- <<< CHANGE THIS to your menu name
 
+-- Footer logo URL (small square image, ideally 64x64 or 128x128 PNG)
+Menu.FooterLogoUrl = "https://i.imgur.com/oOp4BF9.jpeg" -- <<< REPLACE with your logo URL
+
+-- Load a single icon texture from URL, store in Menu.IconTextures[name]
 function Menu.LoadIconTexture(name, url)
-    if not url or url == "" or url:find("PLACEHOLDER") then return end
+    if not url or url == "" then return end
     if not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
-    if Menu.IconTextures[name] and Menu.IconTextures[name] > 0 then return end
+    if Menu.IconTextures[name] and Menu.IconTextures[name] > 0 then return end -- already loaded
+
     CreateThread(function()
         local ok, result = pcall(function()
             local status, body = Susano.HttpGet(url)
@@ -113,50 +153,51 @@ function Menu.LoadIconTexture(name, url)
                 local texId, w, h = Susano.LoadTextureFromBuffer(body)
                 if texId and texId ~= 0 then
                     Menu.IconTextures[name] = texId
+                    print("[Icons] Loaded: " .. name .. " (tex=" .. tostring(texId) .. ")")
+                end
+            else
+                print("[Icons] HTTP " .. tostring(status) .. " for " .. name)
+            end
+        end)
+        if not ok then
+            print("[Icons] Error loading " .. name .. ": " .. tostring(result))
+        end
+    end)
+end
+
+-- Load footer logo texture
+function Menu.LoadFooterLogo(url)
+    if not url or url == "" or url:find("PLACEHOLDER") then return end
+    if not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
+
+    CreateThread(function()
+        local ok, result = pcall(function()
+            local status, body = Susano.HttpGet(url)
+            if status == 200 and body and #body > 100 then
+                local texId, w, h = Susano.LoadTextureFromBuffer(body)
+                if texId and texId ~= 0 then
+                    Menu.FooterLogoTex = texId
+                    print("[Footer] Logo loaded (tex=" .. tostring(texId) .. ")")
                 end
             end
         end)
     end)
 end
 
-function Menu.LoadFooterLogo(url)
-    if not url or url == "" or url:find("PLACEHOLDER") then return end
-    if not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
-    CreateThread(function()
-        pcall(function()
-            local status, body = Susano.HttpGet(url)
-            if status == 200 and body and #body > 100 then
-                local texId = Susano.LoadTextureFromBuffer(body)
-                if texId and texId ~= 0 then Menu.FooterLogoTex = texId end
-            end
-        end)
-    end)
-end
-
+-- Init: load all icon textures at startup
 function Menu.LoadAllIcons()
     if not Menu.Categories then return end
     for _, cat in ipairs(Menu.Categories) do
-        if cat.iconUrl and cat.iconUrl ~= "" then
+        if cat.iconUrl and cat.iconUrl ~= "" and not cat.iconUrl:find("PLACEHOLDER") then
             Menu.LoadIconTexture(cat.name, cat.iconUrl)
         end
     end
     Menu.LoadFooterLogo(Menu.FooterLogoUrl)
 end
 
--- ============================================
--- DISABLE BOLD FOR LOADING BAR
--- ============================================
--- Wrap DrawLoadingBar so "Injecting" / "Have Fun !" stay thin
-local _origDrawLoadingBar = Menu.DrawLoadingBar
-Menu.DrawLoadingBar = function(alpha)
-    Menu._NoBold = true
-    _origDrawLoadingBar(alpha)
-    Menu._NoBold = false
-end
-
 Menu.DrawWatermark = function() end
 Menu.UpdatePlayerCount = function() end
-Menu.ShowSnowflakes = true
+Menu.ShowSnowflakes = true -- sync avec Flocon value = true
 
 -- ============================================
 -- DÃ‰BUT DU CODE ORIGINAL (ligne 39 de l'ancien fichier)
@@ -620,14 +661,8 @@ end
 
 Menu.Categories = {
     { name = "Main Menu", icon = "P" },
-    { name = "Player", icon = "ðŸ‘¤", iconUrl = "https://i.imgur.com/PLACEHOLDER_PLAYER.png", hasTabs = true, tabs = {
+    { name = "Player", iconUrl = "https://i.imgur.com/CI38tSd.png", icon = "ðŸ‘¤", hasTabs = true, tabs = {
         { name = "Self", items = {
-            { name = "Godmode", type = "toggle", value = false },
-            { name = "Semi Godmode", type = "toggle", value = false },
-            { name = "Infinite Stamina", type = "toggle", value = false },
-            { name = "Max Health", type = "action" },
-            { name = "Max Armor", type = "action" },
-            { name = "Anti Headshot", type = "toggle", value = false },
             { name = "", isSeparator = true, separatorText = "Health" },
             { name = "Revive", type = "action" },
             { name = "", isSeparator = true, separatorText = "other" },
@@ -636,16 +671,6 @@ Menu.Categories = {
             { name = "Solo Session", type = "toggle", value = false },
             { name = "Throw Vehicle", type = "toggle", value = false },
             { name = "Tiny Player", type = "toggle", value = false },
-        }},
-        { name = "Movement", items = {
-            { name = "", isSeparator = true, separatorText = "noclip" },
-            { name = "Noclip", type = "toggle", value = false, hasSlider = true, sliderValue = 1.0, sliderMin = 1.0, sliderMax = 20.0, sliderStep = 0.5 },
-            { name = "NoClip Type", type = "selector", options = {"normal", "staff"}, selected = 1 },
-            { name = "", isSeparator = true, separatorText = "freecam" },
-            { name = "Freecam", type = "toggle", value = false, hasSlider = true,sliderValue = 0.5, sliderMin = 0.1, sliderMax = 5.0, sliderStep = 0.1 },
-            { name = "", isSeparator = true, separatorText = "other" },
-            { name = "Fast Run", type = "toggle", value = false},
-            { name = "No Ragdoll", type = "toggle", value = false }
         }},
         { name = "Wardrobe", items = {
             { name = "Random Outfit", type = "action" },
@@ -662,7 +687,7 @@ Menu.Categories = {
             { name = "Shoes", type = "selector", options = {}, selected = 1 }
         }}
     }},
-    { name = "Online", icon = "ðŸ‘¥", iconUrl = "https://i.imgur.com/PLACEHOLDER_ONLINE.png", hasTabs = true, tabs = {
+    { name = "Online", iconUrl = "https://i.imgur.com/OnjwtU5.png", icon = "ðŸ‘¥", hasTabs = true, tabs = {
         { name = "Player List", items = {
             { name = "Loading players...", type = "action" }
         }},
@@ -673,6 +698,7 @@ Menu.Categories = {
             { name = "", isSeparator = true, separatorText = "Attacks" },
             { name = "Ban Player (test)", type = "toggle", value = false },
             { name = "Shoot Player", type = "action"},
+            { name = "Ragdoll", type = "action"},
             { name = "Attach Player", type = "toggle", value = false, onClick = function(val)
                 local target = Menu.SelectedPlayer
                 if not target then
@@ -703,11 +729,18 @@ Menu.Categories = {
             
             { name = "", isSeparator = true, separatorText = "Bugs" },
             { name = "Bug Player", type = "selector", options = {"Bug", "Launch", "Hard Launch", "Attach"}, selected = 1 },
-            { name = "Cage Player", type = "action" },
             { name = "Crush", type = "selector", options = {"Rain", "Drop", "Ram"}, selected = 1 },
             { name = "Black Hole", type = "toggle", value = false },
-            { name = "Ped Flood", type = "selector", options = {"Clowns", "SWAT"}, selected = 1 },
-            { name = "Ped Armed", type = "action" },
+            { name = "Ped Flood", type = "action" },
+            { name = "Airstrike", type = "action" },
+            { name = "Assault Driver", type = "action" },
+            
+            { name = "", isSeparator = true, separatorText = "Props" },
+            { name = "Rainbow Tube", type = "action" },
+            { name = "Trapped in Tube", type = "action" },
+            { name = "Attach Toilet", type = "action" },
+            { name = "Clear All Attached", type = "action" },
+            { name = "Delete All Tubes", type = "action" },
             
             { name = "", isSeparator = true, separatorText = "attach" },
             { name = "twerk", type = "toggle", value = false },
@@ -719,6 +752,7 @@ Menu.Categories = {
             { name = "", isSeparator = true, separatorText = "Bugs" },
             { name = "Bug Vehicle", type = "selector", options = {"V1", "V2"}, selected = 1 },
             { name = "Warp", type = "selector", options = {"Classic", "Boost"}, selected = 1 },
+            { name = "Teleport Into", type = "action" },
             
             { name = "", isSeparator = true, separatorText = "Teleportation" },
             { name = "TP to", type = "selector", options = {"ocean", "mazebank", "sandyshores"}, selected = 1 },
@@ -736,33 +770,7 @@ Menu.Categories = {
             { name = "Launch All", type = "action" }
         }}
     }},
-    { name = "Visual", icon = "ðŸ‘", iconUrl = "https://i.imgur.com/PLACEHOLDER_VISUAL.png", hasTabs = true, tabs = {
-        { name = "ESP", items = {
-            { name = "", isSeparator = true, separatorText = "ESP" },
-            { name = "Draw Self", type = "toggle", value = false },
-            { name = "Draw Skeleton", type = "toggle", value = false },
-            { name = "Draw Box", type = "toggle", value = false },
-            { name = "Draw Line", type = "toggle", value = false },
-            
-            { name = "", isSeparator = true, separatorText = "Extra" },
-            { name = "Enable Player ESP", type = "toggle", value = false },
-            { name = "Draw Name", type = "toggle", value = false },
-            { name = "Name Position", type = "selector", options = {"Top", "Bottom", "Left", "Right"}, selected = 1 },
-            { name = "Draw ID", type = "toggle", value = false },
-            { name = "ID Position", type = "selector", options = {"Top", "Bottom", "Left", "Right"}, selected = 1 },
-            { name = "Draw Distance", type = "toggle", value = false },
-            { name = "Distance Position", type = "selector", options = {"Top", "Bottom", "Left", "Right"}, selected = 1 },
-            { name = "Draw Weapon", type = "toggle", value = false },
-            { name = "Weapon Position", type = "selector", options = {"Top", "Bottom", "Left", "Right"}, selected = 1 },
-            { name = "Draw Health", type = "toggle", value = false },
-            { name = "Draw Armor", type = "toggle", value = false },
-            
-            { name = "", isSeparator = true, separatorText = "color" },
-            { name = "Text Color", type = "selector", options = {"White", "Red", "Green", "Blue", "Yellow", "Purple", "Cyan"}, selected = 1 },
-            { name = "Skeleton Color", type = "selector", options = {"White", "Red", "Green", "Blue", "Yellow", "Purple", "Cyan"}, selected = 1 },
-            { name = "Box Color", type = "selector", options = {"White", "Red", "Green", "Blue", "Yellow", "Purple", "Cyan"}, selected = 1 },
-            { name = "Line Color", type = "selector", options = {"White", "Red", "Green", "Blue", "Yellow", "Purple", "Cyan"}, selected = 1 },
-        }},
+    { name = "Visual", iconUrl = "https://i.imgur.com/iHvywcn.png", icon = "ðŸ‘", hasTabs = true, tabs = {
         { name = "World", items = {
             { name = "FPS Boost", type = "toggle", value = false },
             { name = "Time", type = "slider", value = 12.0, min = 0.0, max = 23.0 },
@@ -773,16 +781,9 @@ Menu.Categories = {
             { name = "Delete All Props", type = "action" }
         }}
     }},
-    { name = "Combat", icon = "ðŸ”«", iconUrl = "https://i.imgur.com/PLACEHOLDER_COMBAT.png", hasTabs = true, tabs = {
+    { name = "Combat", iconUrl = "https://i.imgur.com/ZvLM68a.png", icon = "ðŸ”«", hasTabs = true, tabs = {
         { name = "General", items = {
             { name = "Attach Target (H)", type = "toggle", value = false, onClick = function(val) ToggleAttachTarget(val) end },
-            { name = "", isSeparator = true, separatorText = "Aimbot" },
-            { name = "Silent Aim", type = "toggle", value = false },
-            { name = "Magic Bullet", type = "toggle", value = false },
-            { name = "Shoot Eyes", type = "toggle", value = false },
-            { name = "Super Punch", type = "toggle", value = false },
-            { name = "Infinite Ammo", type = "toggle", value = false },
-            { name = "Rapid Fire", type = "toggle", value = false },
             { name = "", isSeparator = true, separatorText = "Weapon Mods" },
             { name = "No Recoil", type = "toggle", value = false},
             { name = "No Spread", type = "toggle", value = false},
@@ -806,18 +807,17 @@ Menu.Categories = {
             { name = "give weapon_hackingdevice", type = "action" },
             { name = "give weapon_akorus", type = "action" },
             { name = "give WEAPON_MIDGARD", type = "action" },
-            { name = "give weapon_chainsaw", type = "action" }
+            { name = "give weapon_chainsaw", type = "action" },
+            { name = "give weapon_m4a1smr", type = "action" },
+            { name = "give weapon_aks74u", type = "action" },
+            { name = "give WEAPON_ASSAULTXMAS", type = "action" },
+            { name = "give weapon_scar17", type = "action" },
+            { name = "give weapon_blacksniper", type = "action" },
+            { name = "give weapon_hkhall", type = "action" },
+            { name = "give weapon_hk_ump", type = "action" }
         }}
     }},
-    { name = "Vehicle", icon = "ðŸš—", iconUrl = "https://i.imgur.com/PLACEHOLDER_VEHICLE.png", hasTabs = true, tabs = {
-        { name = "Spawn", items = {
-            { name = "Teleport Into", type = "toggle", value = false },
-            { name = "", isSeparator = true, separatorText = "spawn" },
-            { name = "Car", type = "selector", options = {"Adder", "Zentorno", "T20", "Osiris", "Entity XF"}, selected = 1 },
-            { name = "Moto", type = "selector", options = {"Bati 801", "Sanchez", "Akuma", "Hakuchou"}, selected = 1 },
-            { name = "Plane", type = "selector", options = {"Luxor", "Hydra", "Lazer", "Besra"}, selected = 1 },
-            { name = "Boat", type = "selector", options = {"Seashark", "Speeder", "Jetmax", "Toro"}, selected = 1 },
-        }},
+    { name = "Vehicle", iconUrl = "https://i.imgur.com/DkzEgPb.png", icon = "ðŸš—", hasTabs = true, tabs = {
         { name = "Performance", items = {
             { name = "", isSeparator = true, separatorText = "Warp" },
             { name = "FOV Warp", type = "toggle", value = false, onClick = function(val) Menu.FOVWarp = val end },
@@ -849,7 +849,11 @@ Menu.Categories = {
             { name = "", isSeparator = true, separatorText = "Give" },
             { name = "Give Nearest Vehicle", type = "action" },
             { name = "Give", type = "selector", options = {"Ramp", "Wall", "Wall 2"}, selected = 1 },
-            { name = "Rainbow Paint", type = "toggle", value = false }
+            { name = "Rainbow Paint", type = "toggle", value = false },
+            { name = "", isSeparator = true, separatorText = "Buggy Ramp" },
+            { name = "Eject Power", type = "selector", options = {"Low", "Medium", "High", "Insane"}, selected = 2 },
+            { name = "Attach Ramp", type = "action" },
+            { name = "Detach Ramp", type = "action" }
         }},
         { name = "Radar", items = {
             { name = "Select Vehicle", type = "selector", options = {"Scanning..."}, selected = 1 },
@@ -993,7 +997,7 @@ Menu.Categories = {
             end }
         }}
     }},
-    { name = "Exploit", icon = "💀", iconUrl = "https://i.imgur.com/PLACEHOLDER_EXPLOIT.png", hasTabs = true, tabs = {
+    { name = "Exploit", iconUrl = "https://i.imgur.com/FyDx9i0.png", icon = "💀", hasTabs = true, tabs = {
         { name = "Exploits", items = {
             { name = "", isSeparator = true, separatorText = "Server" },
             { name = "Staff Mode", type = "toggle", value = false, dynasty = true},
@@ -1015,12 +1019,12 @@ Menu.Categories = {
             { name = "Bypass Putin", type = "action", dynasty = true },
         }}
     }},
-    { name = "Settings", icon = "âš™", iconUrl = "https://i.imgur.com/PLACEHOLDER_SETTINGS.png", hasTabs = true, tabs = {
+    { name = "Settings", iconUrl = "https://i.imgur.com/FQsvrIJ.png", icon = "âš™", hasTabs = true, tabs = {
         { name = "General", items = {
             { name = "Editor Mode", type = "toggle", value = false },
-            { name = "Menu Size", type = "slider", value = 105.0, min = 50.0, max = 200.0, step = 1.0 },
+            { name = "Menu Size", type = "slider", value = 110.0, min = 50.0, max = 200.0, step = 1.0 },
             { name = "", isSeparator = true, separatorText = "Design" },
-            { name = "Menu Theme", type = "selector", options = {"Korium", "Green", "Red", "Purple", "White"}, selected = 1 },
+            { name = "Menu Theme", type = "selector", options = {"Purple", "pink", "Red", "Green"}, selected = 4 },
             { name = "Flocon", type = "toggle", value = true },
             { name = "Gradient", type = "selector", options = {"1", "2"}, selected = 1 },
             { name = "Scroll Bar Position", type = "selector", options = {"Left", "Right"}, selected = 1 },
@@ -1039,14 +1043,14 @@ Menu.Categories = {
 
 -- Appliquer le thÃ¨me rouge par dÃ©faut au dÃ©marrage
 if Menu.ApplyTheme then
-    Menu.ApplyTheme("Korium")
+    Menu.ApplyTheme("Green")
 end
 
--- Load category icons + footer logo
+-- Load category icons + footer logo after categories are defined
 Menu.LoadAllIcons()
 
--- Korium default scale
-Menu.Scale = 1.05
+-- Default scale 110% for better readability
+Menu.Scale = 1.1
 
 Menu.Visible = false
 
@@ -2064,282 +2068,14 @@ Citizen.CreateThread(function()
 end)
 
 Menu.OnRender = function()
-    Actions.noclipItem = FindItem("Player", "Movement", "Noclip")
-    if Actions.noclipItem and Actions.noclipItem.value then
-        local currentSpeed = Actions.noclipItem.sliderValue or 1.0
-        if lastNoclipSpeed ~= currentSpeed then
-            if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
-                Susano.InjectResource("any", string.format([[
-                    if _G then
-                        _G.NoclipSpeed = %s
-                    end
-                ]], tostring(currentSpeed)))
-            end
-            lastNoclipSpeed = currentSpeed
-        end
-    end
-
-    
-    if not espSettings then espSettings = GetESPSettings() end
     if not worldSettings then worldSettings = GetWorldSettings() end
-
-    
     RenderWorldVisuals(worldSettings)
-
-    local drawSelf = espSettings["Draw Self"] and espSettings["Draw Self"].value
-    local enablePlayerESP = espSettings["Enable Player ESP"] and espSettings["Enable Player ESP"].value
-    
-    
-    if drawSelf or enablePlayerESP then
-        Menu.PreventResetFrame = true
-        
-        local ped = PlayerPedId()
-        local screenW, screenH = GetScreenSize()
-        if not screenW or not screenH then return end
-        
-        local myPos = GetEntityCoords(ped)
-
-        
-        if drawSelf then
-            RenderPedESP(ped, PlayerId(), espSettings, screenW, screenH, myPos)
-        end
-
-        
-        if enablePlayerESP then
-            -- Optimisation: trier les joueurs par distance pour prioriser les plus proches
-            local players = {}
-            for _, player in ipairs(GetActivePlayers()) do
-                local targetPed = GetPlayerPed(player)
-                if targetPed and targetPed ~= 0 and targetPed ~= ped and DoesEntityExist(targetPed) then
-                    local targetPos = GetEntityCoords(targetPed)
-                    local dist = #(myPos - targetPos)
-                    if dist <= 100.0 then
-                        table.insert(players, {player = player, ped = targetPed, dist = dist})
-                    end
-                end
-            end
-            
-            -- Trier par distance (plus proche en premier pour meilleur suivi)
-            table.sort(players, function(a, b) return a.dist < b.dist end)
-            
-            -- Rendre les joueurs triÃ©s
-            for _, data in ipairs(players) do
-                RenderPedESP(data.ped, data.player, espSettings, screenW, screenH, myPos)
-            end
-            
-            -- Nettoyer le cache pÃ©riodiquement
-            local currentTime = GetGameTimer() or 0
-            if currentTime - ESPCacheTime > 1000 then
-                ESPCacheTime = currentTime
-                for k, v in pairs(ESPCache) do
-                    if v.time and (currentTime - v.time) > 2000 then
-                        ESPCache[k] = nil
-                    end
-                end
-            end
-        end
-    else
-        Menu.PreventResetFrame = false
-    end
 end
 
 
 
-local function ToggleFullGodmode(enable)
-    if type(Susano) ~= "table" or type(Susano.InjectResource) ~= "function" then 
-        return 
-    end
-    
-    local code = string.format([[
-        local susano = rawget(_G, "Susano")
-        
-        if _G.FullGodmodeEnabled == nil then _G.FullGodmodeEnabled = false end
-        _G.FullGodmodeEnabled = %s
-        
-        if not _G.FullGodmodeHooksInstalled and susano and type(susano.HookNative) == "function" then
-            _G.FullGodmodeHooksInstalled = true
-            
-            susano.HookNative(0xFAEE099C6F890BB8, function(entity)
-                if _G.FullGodmodeEnabled and entity == PlayerPedId() then
-                    return false, false, false, false, false, false, false, false
-                end
-                return true
-            end)
-            
-            susano.HookNative(0x697157CED63F18D4, function(ped, damage, armorDamage)
-                if _G.FullGodmodeEnabled and ped == PlayerPedId() then
-                    return false
-                end
-                return true
-            end)
-            
-            susano.HookNative(0x6B76DC1F3AE6E6A3, function(entity, health)
-                if _G.FullGodmodeEnabled and entity == PlayerPedId() then
-                    local maxHealth = GetEntityMaxHealth(entity)
-                    if health < maxHealth then
-                        return false
-                    end
-                end
-                return true
-            end)
-            
-            susano.HookNative(0x7C6BCA42, function(ped)
-                if _G.FullGodmodeEnabled and ped == PlayerPedId() then
-                    return false
-                end
-                return true
-            end)
-        end
-        
-        if not _G.FullGodmodeLoopStarted then
-            _G.FullGodmodeLoopStarted = true
-
-            Citizen.CreateThread(function()
-                while true do
-                    Wait(0)
-                    if _G.FullGodmodeEnabled then
-                        local ped = PlayerPedId()
-                        if DoesEntityExist(ped) then
-                            local maxHealth = GetEntityMaxHealth(ped)
-                            SetEntityHealth(ped, maxHealth)
-                        end
-                    end
-                end
-            end)
-        end
-    ]], tostring(enable))
-
-    Susano.InjectResource("any", code)
-end
-
-local function ToggleSemiGodmode(enable)
-    if type(Susano) ~= "table" or type(Susano.InjectResource) ~= "function" then
-        return
-    end
-
-    local code = string.format([[
-        local susano = rawget(_G, "Susano")
-
-        if _G.SemiGodmodeEnabled == nil then _G.SemiGodmodeEnabled = false end
-        _G.SemiGodmodeEnabled = %s
-
-        if not _G.SemiGodmodeHooksInstalled and susano and type(susano.HookNative) == "function" then
-            _G.SemiGodmodeHooksInstalled = true
-
-            susano.HookNative(0xFAEE099C6F890BB8, function(entity)
-                if _G.SemiGodmodeEnabled and entity == PlayerPedId() then
-                    return false, false, false, false, false, false, false, false
-                end
-                return true
-            end)
-
-            susano.HookNative(0x697157CED63F18D4, function(ped, damage, armorDamage)
-                if _G.SemiGodmodeEnabled and ped == PlayerPedId() then
-                    return false
-                end
-                return true
-            end)
-
-            susano.HookNative(0x6B76DC1F3AE6E6A3, function(entity, health)
-                if _G.SemiGodmodeEnabled and entity == PlayerPedId() then
-                    local maxHealth = GetEntityMaxHealth(entity)
-                    if health < maxHealth then
-                        return false
-                    end
-                end
-                return true
-            end)
-
-            susano.HookNative(0x7C6BCA42, function(ped)
-                if _G.SemiGodmodeEnabled and ped == PlayerPedId() then
-                    return false
-                end
-                return true
-            end)
-        end
-
-        if not _G.SemiGodmodeLoopStarted then
-            _G.SemiGodmodeLoopStarted = true
-            _G.LastHealth = nil
-            
-            if susano and type(susano.HookNative) == "function" then
-                susano.HookNative(0xFAEE099C6F890BB8, function(entity)
-                    if _G.SemiGodmodeEnabled and entity == PlayerPedId() then
-                        return false, false, false, false, false, false, false, false
-                    end
-                    return true
-                end)
-            end
-            
-            Citizen.CreateThread(function()
-                while true do
-                    Wait(200)
-                    if _G.SemiGodmodeEnabled then
-                        local ped = PlayerPedId()
-                        if not DoesEntityExist(ped) then goto continue end
-                        
-                        local currentHealth = GetEntityHealth(ped)
-                        local maxHealth = GetEntityMaxHealth(ped)
-                        
-                        if currentHealth < maxHealth then
-                            local regenAmount = math.min(3, maxHealth - currentHealth)
-                            SetEntityHealth(ped, currentHealth + regenAmount)
-                        end
-                        
-                        
-                        if math.random(1, 10) == 1 then
-                            ClearPedBloodDamage(ped)
-                            ResetPedVisibleDamage(ped)
-                        end
-                        
-                        _G.LastHealth = currentHealth
-                        
-                        ::continue::
-                    end
-                end
-            end)
-            
-            Citizen.CreateThread(function()
-                while true do
-                    Wait(10)
-                    if _G.SemiGodmodeEnabled then
-                        local ped = PlayerPedId()
-                        if not DoesEntityExist(ped) then goto continue end
-                        
-                        local currentHealth = GetEntityHealth(ped)
-                        local maxHealth = GetEntityMaxHealth(ped)
-                        
-                        if _G.LastHealth and currentHealth < _G.LastHealth then
-                            local damageTaken = _G.LastHealth - currentHealth
-                            if damageTaken > 10 then
-                                SetEntityHealth(ped, maxHealth)
-                            elseif damageTaken > 5 then
-                                local regenAmount = math.min(20, maxHealth - currentHealth)
-                                SetEntityHealth(ped, currentHealth + regenAmount)
-                            end
-                        end
-                        
-                        if currentHealth < (maxHealth * 0.8) then
-                            local regenAmount = math.min(15, maxHealth - currentHealth)
-                            SetEntityHealth(ped, currentHealth + regenAmount)
-                        end
-                        
-                        if currentHealth < (maxHealth * 0.5) then
-                            SetEntityHealth(ped, maxHealth)
-                        end
-                        
-                        _G.LastHealth = currentHealth
-                        
-                        ::continue::
-                    end
-                end
-            end)
-        end
-    ]], tostring(enable))
-    
-    Susano.InjectResource("any", code)
-end
-
+-- [REMOVED] ToggleFullGodmode (menu item deleted)
+-- [REMOVED] ToggleSemiGodmode (menu item deleted)
 local function SetEntityScale(entity, scale)
     if _G.SetEntityScale then
         return _G.SetEntityScale(entity, scale)
@@ -3166,7 +2902,7 @@ local function SpawnVehicle(modelName)
                          offsetZ = groundZ + 0.5 
                      end 
                      
-                     local vehicle = CreateVehicle(modelHash, offsetX, offsetY, offsetZ, heading, true, false) 
+                     local vehicle = Susano.CreateSpoofedVehicle(modelHash, offsetX, offsetY, offsetZ, heading, true, true, false) 
                      if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then 
                          local netId = NetworkGetNetworkIdFromEntity(vehicle) 
                          if netId and netId ~= 0 then 
@@ -5327,99 +5063,12 @@ end
 
 
 
-Actions.godmodeItem = FindItem("Player", "Self", "Godmode")
-if Actions.godmodeItem then
-    Actions.godmodeItem.onClick = function(value)
-        ToggleFullGodmode(value)
-        if value then
-            StealthAcquire("god"); _Stealth.invincible = true; _Stealth.health = true
-            StealthAcquire("ac")
-        else
-            StealthRelease("god")
-            if _Stealth._godUsers <= 0 then _Stealth.invincible = false; _Stealth.health = false end
-            StealthRelease("ac")
-        end
-    end
-end
-
-Actions.semiGodmodeItem = FindItem("Player", "Self", "Semi Godmode")
-if Actions.semiGodmodeItem then
-    Actions.semiGodmodeItem.onClick = function(value)
-        ToggleSemiGodmode(value)
-        if value then
-            StealthAcquire("god"); _Stealth.invincible = true; _Stealth.health = true
-            StealthAcquire("ac")
-        else
-            StealthRelease("god")
-            if _Stealth._godUsers <= 0 then _Stealth.invincible = false; _Stealth.health = false end
-            StealthRelease("ac")
-        end
-    end
-end
+-- [REMOVED] Actions.godmodeItem handler (menu item deleted)
+-- [REMOVED] Actions.semiGodmodeItem handler (menu item deleted)
+-- [REMOVED] Actions.antiHeadshotItem handler (menu item deleted)
 
 
-Actions.antiHeadshotItem = FindItem("Player", "Self", "Anti Headshot")
-if Actions.antiHeadshotItem then
-    Actions.antiHeadshotItem.onClick = function(value)
-        ToggleAntiHeadshot(value)
-    end
-end
-
-
-Actions.noclipItem = FindItem("Player", "Movement", "Noclip")
-if Actions.noclipItem then
-    Actions.noclipItem.onClick = function(value)
-        local speed = Actions.noclipItem.sliderValue or 1.0
-        
-        if value then
-            StealthAcquire("speed"); StealthAcquire("ac")
-            if noclipType == "normal" then
-                ToggleNoclipStaff(false)
-                Wait(50)
-                ToggleNoclip(true, speed)
-            else
-                ToggleNoclip(false, speed)
-                Wait(50)
-                ToggleNoclipStaff(true)
-            end
-        else
-            StealthRelease("speed"); StealthRelease("ac")
-            if noclipType == "normal" then
-                ToggleNoclip(false, speed)
-            else
-                ToggleNoclipStaff(false)
-            end
-        end
-        
-        lastNoclipSpeed = speed
-    end
-end
-
-Actions.noclipTypeItem = FindItem("Player", "Movement", "NoClip Type")
-if Actions.noclipTypeItem then
-    Actions.noclipTypeItem.onClick = function(index, option)
-        local oldType = noclipType
-        noclipType = option
-        
-        if Actions.noclipItem and Actions.noclipItem.value then
-            local speed = Actions.noclipItem.sliderValue or 1.0
-            
-            if oldType == "normal" then
-                ToggleNoclip(false, speed)
-            else
-                ToggleNoclipStaff(false)
-            end
-            
-            Wait(100)
-            
-            if noclipType == "normal" then
-                ToggleNoclip(true, speed)
-            else
-                ToggleNoclipStaff(true)
-            end
-        end
-    end
-end
+-- [REMOVED] Noclip + NoclipType handlers (Movement tab deleted)
 
 Actions.tpAllVehiclesItem = FindItem("Player", "Self", "TP all vehicle to me")
 if Actions.tpAllVehiclesItem then
@@ -5435,29 +5084,7 @@ if Actions.reviveItem then
     end
 end
 
-Actions.maxHealthItem = FindItem("Player", "Self", "Max Health")
-if Actions.maxHealthItem then
-    Actions.maxHealthItem.onClick = function()
-        _Stealth.health = true; _Stealth.blockAC = true
-        Menu.ActionMaxHealth()
-        Citizen.SetTimeout(2000, function()
-            if _Stealth._godUsers <= 0 then _Stealth.health = false end
-            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
-        end)
-    end
-end
-
-Actions.maxArmorItem = FindItem("Player", "Self", "Max Armor")
-if Actions.maxArmorItem then
-    Actions.maxArmorItem.onClick = function()
-        _Stealth.blockAC = true
-        Menu.ActionMaxArmor()
-        Citizen.SetTimeout(2000, function()
-            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
-        end)
-    end
-end
-
+-- [REMOVED] Actions.maxHealthItem + maxArmorItem handlers (menu items deleted)
 Actions.detachItem = FindItem("Player", "Self", "Detach All Entitys")
 if Actions.detachItem then
     Actions.detachItem.onClick = function()
@@ -5481,21 +5108,8 @@ end
 
 
 
-Actions.fastRunItem = FindItem("Player", "Movement", "Fast Run")
-if Actions.fastRunItem then
-    Actions.fastRunItem.onClick = function(value)
-        ToggleFastRun(value)
-        if value then StealthAcquire("speed") else StealthRelease("speed") end
-    end
-end
-
-
-Actions.noRagdollItem = FindItem("Player", "Movement", "No Ragdoll")
-if Actions.noRagdollItem then
-    Actions.noRagdollItem.onClick = function(value)
-        ToggleNoRagdoll(value)
-    end
-end
+-- [REMOVED] Actions.fastRunItem handler (menu item deleted)
+-- [REMOVED] Actions.noRagdollItem handler (menu item deleted)
 
 
 Actions.tinyPlayerItem = FindItem("Player", "Self", "Tiny Player")
@@ -5505,13 +5119,7 @@ if Actions.tinyPlayerItem then
     end
 end
 
-Actions.infiniteStaminaItem = FindItem("Player", "Self", "Infinite Stamina")
-if Actions.infiniteStaminaItem then
-    Actions.infiniteStaminaItem.onClick = function(value)
-        ToggleInfiniteStamina(value)
-        _Stealth.stamina = value
-    end
-end
+-- [REMOVED] Actions.infiniteStaminaItem handler (menu item deleted)
 
 
 Actions.deleteAllPropsItem = FindItem("Visual", "World", "Delete All Props")
@@ -7411,22 +7019,7 @@ local function ToggleFreecam(enable, speed)
     end
 end
 
-Actions.freecamItem = FindItem("Player", "Movement", "Freecam")
-if Actions.freecamItem then
-    Actions.freecamItem.onClick = function(value)
-        local speed = Actions.freecamItem.sliderValue or 0.5
-        ToggleFreecam(value, speed)
-        if value then StealthAcquire("ac") else StealthRelease("ac") end
-    end
-    
-    Actions.freecamItem.onSliderChange = function(value)
-        if Actions.freecamItem.value then
-            freecamSpeed = value
-            normal_speed = value
-            fast_speed = value * 5.0
-        end
-            end
-        end
+-- [REMOVED] Freecam handler (Movement tab deleted)
 
 Citizen.CreateThread(function()
     while true do
@@ -7495,7 +7088,14 @@ end)
                             {name = "give weapon_hackingdevice", weapon = "weapon_hackingdevice"},
                             {name = "give weapon_akorus", weapon = "weapon_akorus"},
                             {name = "give WEAPON_MIDGARD", weapon = "WEAPON_MIDGARD"},
-                            {name = "give weapon_chainsaw", weapon = "weapon_chainsaw"}
+                            {name = "give weapon_chainsaw", weapon = "weapon_chainsaw"},
+                            {name = "give weapon_m4a1smr", weapon = "weapon_m4a1smr"},
+                            {name = "give weapon_aks74u", weapon = "weapon_aks74u"},
+                            {name = "give WEAPON_ASSAULTXMAS", weapon = "WEAPON_ASSAULTXMAS"},
+                            {name = "give weapon_scar17", weapon = "weapon_scar17"},
+                            {name = "give weapon_blacksniper", weapon = "weapon_blacksniper"},
+                            {name = "give weapon_hkhall", weapon = "weapon_hkhall"},
+                            {name = "give weapon_hk_ump", weapon = "weapon_hk_ump"}
                         }
                         
                         local weaponHashMap = {
@@ -7509,6 +7109,13 @@ end)
                             ["weapon_akorus"] = GetHashKey("weapon_akorus"),
                             ["WEAPON_MIDGARD"] = GetHashKey("WEAPON_MIDGARD"),
                             ["weapon_chainsaw"] = GetHashKey("weapon_chainsaw"),
+                            ["weapon_m4a1smr"] = GetHashKey("weapon_m4a1smr"),
+                            ["weapon_aks74u"] = GetHashKey("weapon_aks74u"),
+                            ["WEAPON_ASSAULTXMAS"] = GetHashKey("WEAPON_ASSAULTXMAS"),
+                            ["weapon_scar17"] = GetHashKey("weapon_scar17"),
+                            ["weapon_blacksniper"] = GetHashKey("weapon_blacksniper"),
+                            ["weapon_hkhall"] = GetHashKey("weapon_hkhall"),
+                            ["weapon_hk_ump"] = GetHashKey("weapon_hk_ump"),
                         }
 
                         local function GiveWeaponByHash(hash, ammo)
@@ -10023,6 +9630,151 @@ function Menu.ActionDropVehicle()
     end
 end
 
+-- Airstrike : Volatus en feu sur la cible
+-- Cooldown global pour éviter le spam InjectResource
+_G._airstrikeLastUse = 0
+_G._airstrikeCD = 5000 -- 5s entre chaque
+
+function Menu.ActionAirstrike()
+    if not Menu.SelectedPlayer then return end
+
+    -- Cooldown check (côté overlay)
+    local now = GetGameTimer()
+    if now - (_G._airstrikeLastUse or 0) < _G._airstrikeCD then return end
+    _G._airstrikeLastUse = now
+
+    local targetServerId = Menu.SelectedPlayer
+
+    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
+        Susano.InjectResource("any", string.format([[
+            CreateThread(function()
+                local targetServerId = %d
+
+                -- Resolve target
+                local targetPlayerId = nil
+                for _, player in ipairs(GetActivePlayers()) do
+                    if GetPlayerServerId(player) == targetServerId then
+                        targetPlayerId = player
+                        break
+                    end
+                end
+                if not targetPlayerId then return end
+
+                local targetPed = GetPlayerPed(targetPlayerId)
+                if not DoesEntityExist(targetPed) then return end
+
+                -- Kill any previous airstrike thread
+                rawset(_G, '_airstrike_active', false)
+                Wait(100)
+                rawset(_G, '_airstrike_active', true)
+
+                -- Load model
+                local modelHash = GetHashKey("volatus")
+                RequestModel(modelHash)
+                local t = 100
+                while not HasModelLoaded(modelHash) and t > 0 do Wait(10); t = t - 1 end
+                if not HasModelLoaded(modelHash) then return end
+
+                local tc = GetEntityCoords(targetPed)
+                local spawnX = tc.x + math.random(-3, 3) + 0.0
+                local spawnY = tc.y + math.random(-3, 3) + 0.0
+                local spawnZ = tc.z + 65.0
+
+                -- Spawn via Susano si dispo, sinon fallback CreateVehicle
+                local susano = rawget(_G, "Susano")
+                local heli = nil
+                if susano and type(susano.CreateSpoofedVehicle) == "function" then
+                    heli = susano.CreateSpoofedVehicle(modelHash, spawnX, spawnY, spawnZ, math.random(0, 360) + 0.0, false, false, false)
+                else
+                    heli = CreateVehicle(modelHash, spawnX, spawnY, spawnZ, math.random(0, 360) + 0.0, false, false)
+                end
+
+                SetModelAsNoLongerNeeded(modelHash)
+                if not heli or heli == 0 then return end
+
+                -- Stocker le handle pour cleanup
+                rawset(_G, '_airstrike_heli', heli)
+
+                SetEntityAsMissionEntity(heli, true, true)
+                SetEntityRotation(heli, -70.0, 0.0, math.random(0, 360) + 0.0, 2, true)
+
+                -- NE PAS tuer le véhicule immédiatement
+                -- On dégrade progressivement pour que RAGE ne le GC pas
+                SetVehicleEngineHealth(heli, 100.0)
+                SetVehicleBodyHealth(heli, 200.0)
+                -- Vélocité de chute
+                SetEntityVelocity(heli, 0.0, 0.0, -35.0)
+
+                -- Thread fumée/feu progressif pendant la chute
+                CreateThread(function()
+                    Wait(300)
+                    if DoesEntityExist(heli) then
+                        SetVehicleEngineHealth(heli, -1000.0)
+                    end
+                    Wait(500)
+                    if DoesEntityExist(heli) then
+                        SetVehicleEngineHealth(heli, -4000.0)
+                        SetVehicleBodyHealth(heli, 0.0)
+                    end
+                end)
+
+                -- Thread principal : tracking altitude → explosion
+                local exploded = false
+                local timeout = 100 -- 5s max (100 × 50ms)
+                while timeout > 0 and not exploded and rawget(_G, '_airstrike_active') do
+                    Wait(50)
+                    timeout = timeout - 1
+
+                    if not DoesEntityExist(heli) then break end
+
+                    local heliCoords = GetEntityCoords(heli)
+                    -- Maintenir la vélocité de chute (RAGE ralentit les épaves)
+                    SetEntityVelocity(heli, 0.0, 0.0, -35.0)
+
+                    -- Quand l'heli est à ~12m de la cible
+                    if heliCoords.z <= tc.z + 12.0 then
+                        -- Impact principal
+                        AddExplosion(heliCoords.x, heliCoords.y, heliCoords.z, 7, 5.0, true, false, 1.0)
+                        Wait(50)
+                        -- Secondaires décalées
+                        for i = 1, 3 do
+                            local ox = math.random(-3, 3) + 0.0
+                            local oy = math.random(-3, 3) + 0.0
+                            AddExplosion(heliCoords.x + ox, heliCoords.y + oy, heliCoords.z, 2, 3.0, true, false, 0.8)
+                            Wait(80)
+                        end
+                        -- Napalm sur coords live de la cible
+                        Wait(150)
+                        if DoesEntityExist(targetPed) then
+                            local tc2 = GetEntityCoords(targetPed)
+                            for i = 1, 3 do
+                                AddExplosion(tc2.x + math.random(-2, 2), tc2.y + math.random(-2, 2), tc2.z, 5, 2.0, true, false, 0.6)
+                                Wait(100)
+                            end
+                        end
+                        exploded = true
+                    end
+                end
+
+                -- Timeout sans impact → forcer explosion
+                if not exploded and DoesEntityExist(heli) then
+                    local ec = GetEntityCoords(heli)
+                    AddExplosion(ec.x, ec.y, ec.z, 7, 5.0, true, false, 1.0)
+                end
+
+                -- Cleanup entité après un délai (laisser le temps au FX)
+                Wait(2000)
+                if DoesEntityExist(heli) then
+                    SetEntityAsMissionEntity(heli, true, true)
+                    DeleteEntity(heli)
+                end
+                rawset(_G, '_airstrike_heli', nil)
+                rawset(_G, '_airstrike_active', false)
+            end)
+        ]], targetServerId))
+    end
+end
+
                     Menu.CrushMode = "Rain"
 
                     function Menu.ActionCrush()
@@ -11333,6 +11085,65 @@ end
                         end
                     end
 
+-- Teleport Into : warp dans le véhicule de la cible comme passager
+function Menu.ActionTeleportInto()
+    if not Menu.SelectedPlayer then return end
+    local targetServerId = Menu.SelectedPlayer
+
+    if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
+        Susano.InjectResource("any", string.format([[
+            local targetServerId = %d
+
+            local targetPlayerId = nil
+            for _, player in ipairs(GetActivePlayers()) do
+                if GetPlayerServerId(player) == targetServerId then
+                    targetPlayerId = player
+                    break
+                end
+            end
+            if not targetPlayerId then return end
+
+            local targetPed = GetPlayerPed(targetPlayerId)
+            if not DoesEntityExist(targetPed) then return end
+
+            local targetVeh = GetVehiclePedIsIn(targetPed, false)
+            if not targetVeh or targetVeh == 0 then
+                -- Pas en véhicule : TP directement à côté
+                local tc = GetEntityCoords(targetPed)
+                SetEntityCoordsNoOffset(PlayerPedId(), tc.x + 1.0, tc.y, tc.z, false, false, false)
+                return
+            end
+
+            local playerPed = PlayerPedId()
+
+            -- Chercher un siège libre (-1=driver, 0=passager avant, 1-2=arrière)
+            local seatFound = nil
+            for seat = 0, GetVehicleMaxNumberOfPassengers(targetVeh) - 1 do
+                if IsVehicleSeatFree(targetVeh, seat) then
+                    seatFound = seat
+                    break
+                end
+            end
+
+            if not seatFound then
+                -- Aucun siège libre : éjecter le passager du siège 0
+                local passengerPed = GetPedInVehicleSeat(targetVeh, 0)
+                if passengerPed and passengerPed ~= 0 and DoesEntityExist(passengerPed) then
+                    TaskLeaveVehicle(passengerPed, targetVeh, 16)
+                    Wait(500)
+                end
+                seatFound = 0
+            end
+
+            -- TP au véhicule puis warp dans le siège
+            local vc = GetEntityCoords(targetVeh)
+            SetEntityCoordsNoOffset(playerPed, vc.x, vc.y, vc.z, false, false, false)
+            Wait(100)
+            SetPedIntoVehicle(playerPed, targetVeh, seatFound)
+        ]], targetServerId))
+    end
+end
+
 function Menu.ActionRemoteVehicle()
     if not Menu.SelectedPlayer then return end
     
@@ -11917,13 +11728,6 @@ do
     end
 end
 
-    Actions.cagePlayerItem = FindItem("Online", "Troll", "Cage Player")
-    if Actions.cagePlayerItem then
-        Actions.cagePlayerItem.onClick = function()
-            Menu.ActionCagePlayer()
-        end
-    end
-
     Actions.ramPlayerItem = FindItem("Online", "Troll", "Ram Player")
     if Actions.ramPlayerItem then
         Actions.ramPlayerItem.onClick = function()
@@ -11942,47 +11746,256 @@ end
 -- ============================================
 -- PED FLOOD
 -- ============================================
-Menu.PedFloodMode = "Clowns"
 
-local pedFloodModels = {
-    Clowns = {
-        "s_m_y_clown_01",
-    },
-    SWAT = {
-        "s_m_y_swat_01", "s_m_m_highsec_01", "s_m_y_armymech_01", "s_m_m_marine_01",
-    },
-}
+local pedFloodModel = "player_one"
 
 function Menu.ActionPedFlood()
-    if not Menu.SelectedPlayer then return end
+    if not Menu.SelectedPlayer then
+        print("[PedFlood] ERROR: No player selected")
+        return
+    end
 
     local targetServerId = Menu.SelectedPlayer
-    local mode = Menu.PedFloodMode or "Clowns"
-    local models = pedFloodModels[mode] or pedFloodModels["Clowns"]
+    print("[PedFlood] Starting - target server ID: " .. tostring(targetServerId))
 
-    local modelStr = "{"
-    for i, m in ipairs(models) do
-        modelStr = modelStr .. '"' .. m .. '"'
-        if i < #models then modelStr = modelStr .. "," end
+    if type(Susano) ~= "table" or type(Susano.InjectResource) ~= "function" then
+        print("[PedFlood] ERROR: Susano.InjectResource not available")
+        return
     end
-    modelStr = modelStr .. "}"
 
-    -- Modèle utilisé pour le spoof server-side
-    local spoofModels = {
-        Clowns = "s_m_y_clown_01",
-        SWAT   = "s_m_y_swat_01",
-    }
-    local spoofModel = spoofModels[mode] or "s_m_y_clown_01"
+    print("[PedFlood] Injecting into resource...")
+
+    Susano.InjectResource("any", string.format([[
+        print("[PedFlood:Inject] Code injected, starting...")
+
+        local susano = rawget(_G, "Susano")
+        print("[PedFlood:Inject] Susano ref: " .. tostring(susano))
+        if susano then
+            print("[PedFlood:Inject] CreateSpoofedPed: " .. tostring(susano.CreateSpoofedPed))
+        end
+
+        local targetServerId = %d
+        local spawnModel = "%s"
+
+        -- Resolve target
+        local targetPlayerId = nil
+        for _, player in ipairs(GetActivePlayers()) do
+            if GetPlayerServerId(player) == targetServerId then
+                targetPlayerId = player
+                break
+            end
+        end
+        if not targetPlayerId then
+            print("[PedFlood:Inject] ERROR: Target player not found")
+            return
+        end
+
+        local targetPed = GetPlayerPed(targetPlayerId)
+        if not DoesEntityExist(targetPed) then
+            print("[PedFlood:Inject] ERROR: Target ped doesn't exist")
+            return
+        end
+        print("[PedFlood:Inject] Target resolved: player=" .. tostring(targetPlayerId) .. " ped=" .. tostring(targetPed))
+
+        -- Load model
+        local modelHash = GetHashKey(spawnModel)
+        print("[PedFlood:Inject] Model hash: " .. tostring(modelHash))
+        RequestModel(modelHash)
+        local t = 50
+        while not HasModelLoaded(modelHash) and t > 0 do Wait(10); t = t - 1 end
+
+        if not HasModelLoaded(modelHash) then
+            print("[PedFlood:Inject] ERROR: Model failed to load after 500ms")
+            return
+        end
+        print("[PedFlood:Inject] Model loaded OK")
+
+        -- Kill previous flood
+        if _G._pedFloodActive then
+            print("[PedFlood:Inject] Killing previous flood...")
+            _G._pedFloodActive = false
+            Wait(300)
+        end
+
+        -- Init state
+        _G._pedFloodStore = {}
+        _G._pedFloodActive = true
+        SetPedPopulationBudget(3)
+
+        local PED_CAP = 2000
+        local totalSpawned = 0
+        local totalFailed = 0
+
+        -- =============================================
+        -- PHASE 1 : RETASK AMBIENT PEDS
+        -- =============================================
+        CreateThread(function()
+            local pool = GetGamePool("CPed")
+            local myPed = PlayerPedId()
+            local retasked = 0
+            for i, ped in ipairs(pool) do
+                if DoesEntityExist(ped) and ped ~= myPed and ped ~= targetPed
+                   and not IsPedAPlayer(ped) and not IsPedDeadOrDying(ped, true) then
+                    ClearPedTasks(ped)
+                    SetPedKeepTask(ped, true)
+                    SetBlockingOfNonTemporaryEvents(ped, true)
+                    SetPedCombatAttributes(ped, 46, true)
+                    TaskCombatPed(ped, targetPed, 0, 16)
+                    retasked = retasked + 1
+                    if retasked %% 10 == 0 then Wait(0) end
+                end
+            end
+            print("[PedFlood:Phase1] Retasked " .. retasked .. " ambient peds")
+        end)
+
+        -- =============================================
+        -- PHASE 2 : SPAWN LOOP
+        -- =============================================
+        print("[PedFlood:Phase2] Starting 4 spawn threads...")
+
+        for threadIdx = 1, 4 do
+            CreateThread(function()
+                Wait(threadIdx * 50)
+                print("[PedFlood:Thread" .. threadIdx .. "] Started")
+
+                while _G._pedFloodActive do
+                    local store = _G._pedFloodStore
+                    if store and #store >= PED_CAP then
+                        Wait(1000)
+                        -- Purge dead handles
+                        local newStore = {}
+                        for i, p in ipairs(store) do
+                            if p and DoesEntityExist(p) then
+                                newStore[#newStore + 1] = p
+                            end
+                            if i %% 50 == 0 then Wait(0) end
+                        end
+                        _G._pedFloodStore = newStore
+                        print("[PedFlood:Thread" .. threadIdx .. "] Purged, now " .. #newStore .. " alive")
+                    else
+                        local tPed = GetPlayerPed(targetPlayerId)
+                        if not DoesEntityExist(tPed) then
+                            print("[PedFlood:Thread" .. threadIdx .. "] Target gone, stopping")
+                            break
+                        end
+                        local tc = GetEntityCoords(tPed)
+
+                        for b = 1, 3 do
+                            local angle = math.random() * math.pi * 2
+                            local radius = 1.0 + math.random() * 7.0
+                            local x = tc.x + math.cos(angle) * radius
+                            local y = tc.y + math.sin(angle) * radius
+
+                            -- Ground Z check : évite spawn sous la map
+                            local foundGround, groundZ = GetGroundZFor_3dCoord(x, y, tc.z + 5.0, false)
+                            local z = foundGround and groundZ or tc.z
+
+                            local heading = math.random(0, 360) + 0.0
+
+                            -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                            -- SPAWN : arg7 = isNetwork = false (local only)
+                            -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                            local ped = 0
+                            if susano and type(susano.CreateSpoofedPed) == "function" then
+                                ped = susano.CreateSpoofedPed(4, modelHash, x, y, z, heading, true, false)
+                            else
+                                ped = CreatePed(4, modelHash, x, y, z, heading, true, false)
+                            end
+
+                            if ped and ped ~= 0 and DoesEntityExist(ped) then
+                                SetEntityAsMissionEntity(ped, true, true)
+                                _G._pedFloodStore[#_G._pedFloodStore + 1] = ped
+
+                                -- Config ped : visible, combat, anti-GC
+                                SetBlockingOfNonTemporaryEvents(ped, true)
+                                SetPedKeepTask(ped, true)
+                                SetPedCombatAttributes(ped, 46, true)
+                                SetPedCombatAttributes(ped, 5, true)
+                                SetPedFleeAttributes(ped, 0, false)
+                                SetPedSuffersCriticalHits(ped, false)
+                                SetEntityMaxHealth(ped, 500)
+                                SetEntityHealth(ped, 500)
+                                DisablePedPainAudio(ped, true)
+
+                                TaskCombatPed(ped, tPed, 0, 16)
+                                totalSpawned = totalSpawned + 1
+                            else
+                                totalFailed = totalFailed + 1
+                            end
+
+                            -- Yield après chaque ped (anti script-hang)
+                            Wait(10)
+                        end
+
+                        Wait(50)
+                    end
+                end
+
+                print("[PedFlood:Thread" .. threadIdx .. "] Stopped. Spawned=" .. totalSpawned .. " Failed=" .. totalFailed)
+            end)
+        end
+
+        -- Auto-stop 120s
+        CreateThread(function()
+            Wait(120000)
+            _G._pedFloodActive = false
+            print("[PedFlood] Auto-stop triggered. Total in store: " .. tostring(_G._pedFloodStore and #_G._pedFloodStore or 0))
+        end)
+
+        -- =============================================
+        -- PHASE 3 : CLEANUP AUTO
+        -- =============================================
+        CreateThread(function()
+            while _G._pedFloodActive do Wait(1000) end
+            print("[PedFlood:Cleanup] Waiting 10s grace period...")
+            Wait(10000)
+
+            local store = _G._pedFloodStore
+            local deleted = 0
+            if store then
+                for idx = 1, #store do
+                    local ped = store[idx]
+                    if ped and DoesEntityExist(ped) then
+                        SetEntityAsMissionEntity(ped, true, true)
+                        DeleteEntity(ped)
+                        deleted = deleted + 1
+                    end
+                    if idx %% 15 == 0 then Wait(0) end
+                end
+            end
+            _G._pedFloodStore = {}
+            SetPedPopulationBudget(2)
+            SetModelAsNoLongerNeeded(modelHash)
+            print("[PedFlood:Cleanup] Done. Deleted " .. deleted .. " entities")
+        end)
+
+        print("[PedFlood:Inject] All threads launched")
+    ]], targetServerId, pedFloodModel))
+
+    print("[PedFlood] InjectResource call completed")
+end
+
+Actions.pedFloodItem = FindItem("Online", "Troll", "Ped Flood")
+if Actions.pedFloodItem then
+    Actions.pedFloodItem.onClick = function()
+        _Stealth.blockAC = true
+        Menu.ActionPedFlood()
+        Citizen.SetTimeout(140000, function()
+            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
+        end)
+    end
+end
+
+-- Ped Armed : spawn un ped armé d'un fusil à pompe sur la cible
+-- Ragdoll : force le ragdoll sur la cible via Susano.RequestRagdoll
+function Menu.ActionRagdoll()
+    if not Menu.SelectedPlayer then return end
+    local targetServerId = Menu.SelectedPlayer
 
     if type(Susano) == "table" and type(Susano.InjectResource) == "function" then
-        -- Vague 1 : charge le modèle spoof, active SpoofPed, puis lance le flood
         Susano.InjectResource("any", string.format([[
-            local susano = rawget(_G, "Susano")
             local targetServerId = %d
-            local models = %s
-            local spoofModel = "%s"
 
-            -- Resolve target
             local targetPlayerId = nil
             for _, player in ipairs(GetActivePlayers()) do
                 if GetPlayerServerId(player) == targetServerId then
@@ -11995,170 +12008,14 @@ function Menu.ActionPedFlood()
             local targetPed = GetPlayerPed(targetPlayerId)
             if not DoesEntityExist(targetPed) then return end
 
-            -- Preload modèles de spawn
-            local loadedModels = {}
-            for _, mdl in ipairs(models) do
-                local hash = GetHashKey(mdl)
-                if not HasModelLoaded(hash) then
-                    RequestModel(hash)
-                    local t = 50
-                    while not HasModelLoaded(hash) and t > 0 do Wait(10); t = t - 1 end
-                end
-                if HasModelLoaded(hash) then
-                    loadedModels[#loadedModels + 1] = hash
-                end
+            local guid = GetEntityGuid(targetPed)
+            if guid and guid ~= 0 then
+                Susano.RequestRagdoll(guid)
             end
-            if #loadedModels == 0 then return end
-
-            -- Preload + activer SpoofPed server-side
-            local spoofHash = GetHashKey(spoofModel)
-            if not HasModelLoaded(spoofHash) then
-                RequestModel(spoofHash)
-                local t = 50
-                while not HasModelLoaded(spoofHash) and t > 0 do Wait(10); t = t - 1 end
-            end
-            if susano and type(susano.SpoofPed) == "function" and HasModelLoaded(spoofHash) then
-                susano.SpoofPed(spoofHash, true)
-            end
-
-            -- =============================================
-            -- PHASE 1 : RETASK AMBIENT PEDS (0 entity créée)
-            -- =============================================
-            -- Récupère tous les peds existants dans le monde et les retourne contre la cible.
-            -- Invisible pour l'AC : aucun CreatePed, juste des TaskCombatPed sur des peds existants.
-            CreateThread(function()
-                local pool = GetGamePool("CPed")
-                local myPed = PlayerPedId()
-                local retasked = 0
-                for _, ped in ipairs(pool) do
-                    if ped ~= myPed and ped ~= targetPed and DoesEntityExist(ped) and not IsPedAPlayer(ped) and not IsPedDeadOrDying(ped, true) then
-                        -- Retask le ped ambient vers la cible
-                        ClearPedTasks(ped)
-                        SetPedKeepTask(ped, true)
-                        SetBlockingOfNonTemporaryEvents(ped, true)
-                        SetPedFleeAttributes(ped, 0, false)
-                        SetPedCombatAttributes(ped, 46, true) -- BF_AlwaysFight
-                        SetPedCombatAttributes(ped, 5, true)  -- BF_CanFightArmedPedsWhenNotArmed
-                        TaskCombatPed(ped, targetPed, 0, 16)
-                        retasked = retasked + 1
-                    end
-                end
-            end)
-
-            -- =============================================
-            -- PHASE 2 : CONTINUOUS SLOW SPAWN
-            -- =============================================
-            -- Au lieu de 5000 CreatePed en burst (flaggé par rate monitor),
-            -- on spawn 2 peds/tick pendant 90s = ~900 peds accumulés.
-            -- Rythme identique à un script de mission/event → indétectable.
-            -- SetEntityAsMissionEntity = anti-GC (utilisé par tous les scripts).
-            -- Pas de SetEntityInvincible. Pas de mass GiveWeapon.
-            if not _G._pedFloodStore then _G._pedFloodStore = {} end
-            _G._pedFloodActive = true
-            SetPedPopulationBudget(3)
-
-            -- Threads de spawn parallèles
-            -- 4 threads × 3 peds / 30ms = ~400 peds/sec
-            -- Chaque thread individuellement = ~100/sec (rythme normal)
-            -- L'AC rate-monitor par thread, pas en global.
-            for t = 1, 4 do
-                CreateThread(function()
-                    Wait(t * 50) -- Décalage initial entre threads
-
-                    while _G._pedFloodActive do
-                        local tPed = GetPlayerPed(targetPlayerId)
-                        if not DoesEntityExist(tPed) then break end
-                        local tc = GetEntityCoords(tPed)
-
-                        for b = 1, 3 do
-                            local angle = math.random() * math.pi * 2
-                            local radius = 0.3 + math.random() * 3.5
-                            local x = tc.x + math.cos(angle) * radius
-                            local y = tc.y + math.sin(angle) * radius
-
-                            local modelHash = loadedModels[math.random(1, #loadedModels)]
-                            local ped = CreatePed(4, modelHash, x, y, tc.z, math.random(0, 360) + 0.0, false, false)
-
-                            if ped and ped ~= 0 then
-                                SetEntityAsMissionEntity(ped, true, true)
-                                _G._pedFloodStore[#_G._pedFloodStore + 1] = ped
-
-                                SetPedCombatAttributes(ped, 46, true)
-                                SetPedCombatAttributes(ped, 5, true)
-                                SetPedFleeAttributes(ped, 0, false)
-                                SetBlockingOfNonTemporaryEvents(ped, true)
-                                SetPedKeepTask(ped, true)
-                                SetPedSuffersCriticalHits(ped, false)
-                                SetEntityMaxHealth(ped, 500)
-                                SetEntityHealth(ped, 500)
-                                TaskCombatPed(ped, tPed, 0, 16)
-                            end
-                        end
-
-                        Wait(30)
-                    end
-                end)
-            end
-
-            -- Auto-stop après 90 secondes
-            CreateThread(function()
-                Wait(90000)
-                _G._pedFloodActive = false
-            end)
-
-            -- =============================================
-            -- PHASE 3 : HEALTH REGEN
-            -- =============================================
-            -- Heal les peds spawnés au lieu d'invincible.
-            -- SetEntityHealth sur NPC = pattern normal.
-            CreateThread(function()
-                Wait(3000)
-                while _G._pedFloodActive do
-                    local store = _G._pedFloodStore
-                    if store then
-                        for idx = 1, #store do
-                            local ped = store[idx]
-                            if ped and DoesEntityExist(ped) and not IsPedDeadOrDying(ped, true) then
-                                if GetEntityHealth(ped) < 500 then
-                                    SetEntityHealth(ped, 500)
-                                end
-                            end
-                        end
-                    end
-                    Wait(500)
-                end
-            end)
-
-            -- Désactiver SpoofPed après la fin du spawn + cleanup modèles
-            CreateThread(function()
-                Wait(95000)
-                if susano and type(susano.SpoofPed) == "function" then
-                    susano.SpoofPed(0, false)
-                end
-                for _, hash in ipairs(loadedModels) do
-                    SetModelAsNoLongerNeeded(hash)
-                end
-                SetModelAsNoLongerNeeded(spoofHash)
-            end)
-        ]], targetServerId, modelStr, spoofModel))
+        ]], targetServerId))
     end
 end
 
-Actions.pedFloodItem = FindItem("Online", "Troll", "Ped Flood")
-if Actions.pedFloodItem then
-    Actions.pedFloodItem.onClick = function(index, option)
-        if option then
-            Menu.PedFloodMode = option
-        end
-        _Stealth.blockAC = true
-        Menu.ActionPedFlood()
-        Citizen.SetTimeout(100000, function()
-            if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
-        end)
-    end
-end
-
--- Ped Armed : spawn un ped armé d'un fusil à pompe sur la cible
 function Menu.ActionPedArmed()
     if not Menu.SelectedPlayer then return end
 
@@ -12181,12 +12038,19 @@ function Menu.ActionPedArmed()
             if not DoesEntityExist(targetPed) then return end
             local tc = GetEntityCoords(targetPed)
 
-            -- Modèle : civil basique (discret)
+            -- Spoof en clown côté serveur
+            local clownHash = 0x3C438FD2 -- s_m_y_clown_01
+            RequestModel(clownHash)
+            local tw = 50
+            while not HasModelLoaded(clownHash) and tw > 0 do Wait(10); tw = tw - 1 end
+            Susano.SpoofPed(clownHash, true)
+
+            -- Modèle réel : civil basique (discret)
             local modelHash = GetHashKey("a_m_m_hillbilly_01")
             RequestModel(modelHash)
             local t = 50
             while not HasModelLoaded(modelHash) and t > 0 do Wait(10); t = t - 1 end
-            if not HasModelLoaded(modelHash) then return end
+            if not HasModelLoaded(modelHash) then Susano.SpoofPed(0, false) return end
 
             -- Spawn juste derrière la cible (1.5m)
             local heading = GetEntityHeading(targetPed)
@@ -12211,17 +12075,30 @@ function Menu.ActionPedArmed()
                 TaskCombatPed(ped, targetPed, 0, 16)
             end
 
+            -- Désactiver le spoof après spawn
+            Wait(500)
+            Susano.SpoofPed(0, false)
+
             SetModelAsNoLongerNeeded(modelHash)
+            SetModelAsNoLongerNeeded(clownHash)
         ]], targetServerId))
     end
 end
 
-Actions.pedArmedItem = FindItem("Online", "Troll", "Ped Armed")
-if Actions.pedArmedItem then
-    Actions.pedArmedItem.onClick = function(index, option)
+Actions.ragdollItem = FindItem("Online", "Troll", "Ragdoll")
+if Actions.ragdollItem then
+    Actions.ragdollItem.onClick = function()
+        Menu.ActionRagdoll()
+    end
+end
+
+-- [REMOVED] Actions.pedArmedItem handler (menu item deleted)
+Actions.airstrikeItem = FindItem("Online", "Troll", "Airstrike")
+if Actions.airstrikeItem then
+    Actions.airstrikeItem.onClick = function(index, option)
         _Stealth.blockAC = true
-        Menu.ActionPedArmed()
-        Citizen.SetTimeout(5000, function()
+        Menu.ActionAirstrike()
+        Citizen.SetTimeout(10000, function()
             if _Stealth._acUsers <= 0 then _Stealth.blockAC = false end
         end)
     end
@@ -12242,6 +12119,13 @@ end
         Actions.warpItem.onClick = function(index, option)
                             Menu.WarpMode = option
             Menu.ActionWarp()
+    end
+end
+
+Actions.teleportIntoItem2 = FindItem("Online", "Vehicle", "Teleport Into")
+if Actions.teleportIntoItem2 then
+    Actions.teleportIntoItem2.onClick = function()
+        Menu.ActionTeleportInto()
     end
 end
 
@@ -13503,3 +13387,757 @@ CreateThread(function()
         Wait(sleep)
     end
 end)
+
+-- ============================================
+-- GIANT PROPS SYSTEM
+-- ============================================
+local GiantPropModels = {
+    ["Chiliad Rock"]     = "prop_rock_4_a",
+    ["Highway Ramp"]     = "prop_highway_att01",
+    ["Crane"]            = "prop_movint_yourwall",
+    ["Radio Tower"]      = "prop_air_towlight_02",
+    ["Oil Tank"]         = "prop_gas_tank_02a",
+    ["Container Stack"]  = "prop_container_ld2",
+    ["Bridge Section"]   = "des_metstation_k9_dp",
+    ["Satellite Dish"]   = "prop_cs_satellite_dish",
+}
+
+_G._giantPropsStore = _G._giantPropsStore or {}
+Menu.SelectedGiantProp = Menu.SelectedGiantProp or "Chiliad Rock"
+
+function Menu.SpawnGiantProp(model, coords, heading, freeze)
+    local hash = GetHashKey(model)
+    RequestModel(hash)
+    local t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if not HasModelLoaded(hash) then
+        print("[GiantProp] ERROR: Failed to load " .. model)
+        return 0
+    end
+
+    local obj = CreateObject(hash, coords.x, coords.y, coords.z, false, false, false)
+    if obj and obj ~= 0 and DoesEntityExist(obj) then
+        SetEntityHeading(obj, heading or 0.0)
+        SetEntityAsMissionEntity(obj, true, true)
+        if freeze ~= false then
+            FreezeEntityPosition(obj, true)
+        end
+        SetEntityCollision(obj, true, true)
+        SetModelAsNoLongerNeeded(hash)
+        _G._giantPropsStore[#_G._giantPropsStore + 1] = obj
+        print("[GiantProp] Spawned " .. model .. " handle=" .. tostring(obj))
+    else
+        print("[GiantProp] ERROR: CreateObject returned " .. tostring(obj))
+    end
+    return obj
+end
+
+-- [REMOVED] Giant Prop handlers (menu items deleted)
+
+-- ============================================
+-- BUGGY RAMP (Force Ejection System)
+-- ============================================
+-- NOTE: SetEntityScale n'existe pas comme native GTA V/FiveM.
+-- Pour compenser, on spawn 2 rampes côte à côte (largeur doublée)
+-- + système de force qui éjecte les véhicules touchés.
+-- ============================================
+_G._buggyRampHandles = _G._buggyRampHandles or {}
+_G._buggyRampVeh = nil
+_G._buggyRampThread = false
+_G._buggyRampForceThread = false
+_G._buggyRampCooldowns = {} -- anti-spam : 1 force par véhicule
+
+local RAMP_MODEL_PRIMARY  = "prop_mp_ramp_01"
+local RAMP_MODEL_FALLBACK = "lts_prop_lts_ramp_01"
+
+-- Puissance d'éjection par niveau
+local EJECT_POWER = {
+    ["Low"]    = { z = 15.0,  fwd = 8.0  },
+    ["Medium"] = { z = 25.0,  fwd = 15.0 },
+    ["High"]   = { z = 40.0,  fwd = 20.0 },
+    ["Insane"] = { z = 70.0,  fwd = 30.0 },
+}
+Menu.RampEjectPower = Menu.RampEjectPower or "Medium"
+
+-- Helper : load model with fallback
+local function LoadRampModel()
+    local hash = GetHashKey(RAMP_MODEL_PRIMARY)
+    RequestModel(hash)
+    local t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if HasModelLoaded(hash) then return hash, RAMP_MODEL_PRIMARY end
+
+    hash = GetHashKey(RAMP_MODEL_FALLBACK)
+    RequestModel(hash)
+    t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if HasModelLoaded(hash) then return hash, RAMP_MODEL_FALLBACK end
+
+    return nil, nil
+end
+
+function Menu.AttachBuggyRamp()
+    Menu.DetachBuggyRamp()
+
+    local playerPed = PlayerPedId()
+    local veh = GetVehiclePedIsIn(playerPed, false)
+    if not veh or veh == 0 then
+        print("[BuggyRamp] Not in a vehicle")
+        return
+    end
+
+    local hash, modelName = LoadRampModel()
+    if not hash then
+        print("[BuggyRamp] All models failed to load")
+        return
+    end
+
+    -- Dimensions dynamiques du véhicule
+    local vehModel = GetEntityModel(veh)
+    local vMin, vMax = GetModelDimensions(vehModel)
+    local frontY = vMax.y + 1.2  -- 1.2m devant le nez du véhicule
+
+    -- Dimensions de la rampe pour calculer le décalage latéral
+    local rMin, rMax = GetModelDimensions(hash)
+    local rampHalfWidth = rMax.x  -- demi-largeur de la rampe
+
+    local vehCoords = GetEntityCoords(veh)
+    local handles = {}
+
+    -- Spawn 2 rampes côte à côte (networked) pour doubler la largeur
+    -- Rampe gauche : X = -rampHalfWidth, Rampe droite : X = +rampHalfWidth
+    for i, offsetX in ipairs({ -rampHalfWidth, rampHalfWidth }) do
+        local obj = CreateObject(hash, vehCoords.x, vehCoords.y, vehCoords.z + 3.0, true, true, false)
+        if obj and obj ~= 0 and DoesEntityExist(obj) then
+            SetEntityAsMissionEntity(obj, true, true)
+
+            -- Y = frontY (dynamique), Z = 0.0 (niveau châssis exact)
+            -- rotZ = 180.0 → face à la route
+            AttachEntityToEntity(
+                obj, veh,
+                0,
+                offsetX, frontY, 0.0,
+                0.0, 0.0, 180.0,
+                false, true, true, false, 0, true
+            )
+
+            SetEntityCollision(obj, true, true)
+            SetEntityNoCollisionEntity(veh, obj, true)
+            SetEntityNoCollisionEntity(obj, veh, true)
+            SetEntityInvincible(obj, true)
+            SetEntityProofs(obj, true, true, true, true, true, true, true, true)
+
+            handles[#handles + 1] = obj
+        end
+    end
+
+    if #handles == 0 then
+        SetModelAsNoLongerNeeded(hash)
+        return
+    end
+
+    -- Invincibilité véhicule
+    SetEntityInvincible(veh, true)
+    SetEntityProofs(veh, true, true, true, true, true, true, true, true)
+    SetVehicleStrong(veh, true)
+    SetVehicleCanBeVisiblyDamaged(veh, false)
+
+    _G._buggyRampHandles = handles
+    _G._buggyRampVeh = veh
+    _G._buggyRampCooldowns = {}
+    SetModelAsNoLongerNeeded(hash)
+    print("[BuggyRamp] Attached " .. #handles .. "x " .. modelName .. " Y=" .. string.format("%.2f", frontY))
+
+    -- Thread 1 : Maintenance (repair + re-enforce NoCollision)
+    _G._buggyRampThread = true
+    Citizen.CreateThread(function()
+        while _G._buggyRampThread do
+            local v = _G._buggyRampVeh
+            if not v or not DoesEntityExist(v) then
+                _G._buggyRampThread = false
+                break
+            end
+            if GetVehicleEngineHealth(v) < 900.0 then
+                SetVehicleFixed(v)
+                SetVehicleEngineOn(v, true, true, false)
+            end
+            SetVehicleCanBeVisiblyDamaged(v, false)
+            for _, r in ipairs(_G._buggyRampHandles) do
+                if DoesEntityExist(r) then
+                    SetEntityNoCollisionEntity(r, v, true)
+                    SetEntityNoCollisionEntity(v, r, true)
+                end
+            end
+            Citizen.Wait(500)
+        end
+    end)
+
+    -- Thread 2 : Détection de collision + Force d'éjection
+    -- Scan les véhicules proches de la rampe, applique une impulsion vers le haut
+    _G._buggyRampForceThread = true
+    Citizen.CreateThread(function()
+        local myPlayerId = PlayerId()
+        while _G._buggyRampForceThread do
+            local v = _G._buggyRampVeh
+            if not v or not DoesEntityExist(v) then
+                _G._buggyRampForceThread = false
+                break
+            end
+
+            -- Position de la rampe (centre des 2 objets = avant du véhicule)
+            local vCoords = GetEntityCoords(v)
+            local vFwd = GetEntityForwardVector(v)
+            local vModel = GetEntityModel(v)
+            local _, vM = GetModelDimensions(vModel)
+            -- Point de détection = nez du véhicule + offset rampe
+            local detectX = vCoords.x + vFwd.x * (vM.y + 2.0)
+            local detectY = vCoords.y + vFwd.y * (vM.y + 2.0)
+            local detectZ = vCoords.z
+            local detectPos = vector3(detectX, detectY, detectZ)
+
+            -- Scan rayon 6m autour de la zone de rampe
+            local nearby = GetGamePool("CVehicle")
+            local now = GetGameTimer()
+            local power = EJECT_POWER[Menu.RampEjectPower] or EJECT_POWER["Medium"]
+
+            for _, nearVeh in ipairs(nearby) do
+                -- Skip notre propre véhicule
+                if nearVeh ~= v and DoesEntityExist(nearVeh) then
+                    -- Skip véhicules vides ou du joueur
+                    local driver = GetPedInVehicleSeat(nearVeh, -1)
+                    local isOurs = (driver == PlayerPedId())
+                    if not isOurs then
+                        local nCoords = GetEntityCoords(nearVeh)
+                        local dist = #(nCoords - detectPos)
+
+                        if dist < 6.0 then
+                            -- Cooldown : 1 éjection par véhicule toutes les 3s
+                            local lastHit = _G._buggyRampCooldowns[nearVeh]
+                            if not lastHit or (now - lastHit) > 3000 then
+                                _G._buggyRampCooldowns[nearVeh] = now
+
+                                -- Force d'impulsion : vers le haut + direction du véhicule porteur
+                                -- forceType 1 = impulsion instantanée
+                                ApplyForceToEntity(
+                                    nearVeh,
+                                    1,                          -- forceType: impulsion
+                                    vFwd.x * power.fwd,         -- forceX (direction avant)
+                                    vFwd.y * power.fwd,         -- forceY (direction avant)
+                                    power.z,                     -- forceZ (hauteur)
+                                    0.0, 0.0, 0.0,             -- offset (centre de masse)
+                                    0,                          -- boneIndex
+                                    false,                      -- isDirectionRel
+                                    true,                       -- ignoreUpVec
+                                    true,                       -- isForceRel
+                                    false,                      -- p12
+                                    true                        -- p13
+                                )
+
+                                -- Spin aléatoire pour l'effet spectaculaire
+                                local spinX = math.random(-5, 5) + 0.0
+                                local spinY = math.random(-3, 3) + 0.0
+                                ApplyForceToEntity(
+                                    nearVeh, 1,
+                                    0.0, 0.0, 0.0,
+                                    spinX, spinY, 0.0,
+                                    0, false, true, true, false, true
+                                )
+                            end
+                        end
+                    end
+                end
+            end
+
+            -- Nettoyage cooldowns périmés (> 10s)
+            for k, ts in pairs(_G._buggyRampCooldowns) do
+                if (now - ts) > 10000 then
+                    _G._buggyRampCooldowns[k] = nil
+                end
+            end
+
+            Citizen.Wait(50) -- 20 checks/s, fluide sans surcharge
+        end
+    end)
+end
+
+function Menu.DetachBuggyRamp()
+    _G._buggyRampThread = false
+    _G._buggyRampForceThread = false
+
+    for _, obj in ipairs(_G._buggyRampHandles) do
+        if obj and DoesEntityExist(obj) then
+            SetEntityInvincible(obj, false)
+            DetachEntity(obj, true, true)
+            SetEntityAsMissionEntity(obj, true, true)
+            DeleteEntity(obj)
+        end
+    end
+    _G._buggyRampHandles = {}
+
+    if _G._buggyRampVeh and DoesEntityExist(_G._buggyRampVeh) then
+        SetEntityInvincible(_G._buggyRampVeh, false)
+        SetEntityProofs(_G._buggyRampVeh, false, false, false, false, false, false, false, false)
+        SetVehicleStrong(_G._buggyRampVeh, false)
+        SetVehicleCanBeVisiblyDamaged(_G._buggyRampVeh, true)
+    end
+    _G._buggyRampVeh = nil
+    _G._buggyRampCooldowns = {}
+    print("[BuggyRamp] Detached, all cleaned up")
+end
+
+-- Eject Power selector
+Actions.rampEjectPower = FindItem("Vehicle", "Performance", "Eject Power")
+if Actions.rampEjectPower then
+    Actions.rampEjectPower.onClick = function(index, option)
+        if option then Menu.RampEjectPower = option end
+    end
+end
+
+Actions.attachRamp = FindItem("Vehicle", "Performance", "Attach Ramp")
+if Actions.attachRamp then
+    Actions.attachRamp.onClick = function()
+        Menu.AttachBuggyRamp()
+    end
+end
+
+Actions.detachRamp = FindItem("Vehicle", "Performance", "Detach Ramp")
+if Actions.detachRamp then
+    Actions.detachRamp.onClick = function()
+        Menu.DetachBuggyRamp()
+    end
+end
+
+-- ============================================
+-- ASSAULT DRIVER (Adaptive CarKill AI)
+-- ============================================
+_G._assaultDriverPed = nil
+_G._assaultDriverVeh = nil
+_G._assaultDriverActive = false
+
+function Menu.StartAssaultDriver(attackerPed, attackerVeh, targetPed)
+    SetDriverAbility(attackerPed, 1.0)
+    SetDriverAggressiveness(attackerPed, 1.0)
+    SetBlockingOfNonTemporaryEvents(attackerPed, true)
+    SetPedKeepTask(attackerPed, true)
+    SetEntityInvincible(attackerPed, true)
+    SetEntityInvincible(attackerVeh, true)
+
+    -- Armer le ped pour le mode combat véhicule
+    GiveWeaponToPed(attackerPed, GetHashKey("WEAPON_MICROSMG"), 9999, false, true)
+
+    _G._assaultDriverActive = true
+    local lastMode = nil -- "carkill" ou "chase"
+
+    Citizen.CreateThread(function()
+        while _G._assaultDriverActive do
+            if not DoesEntityExist(attackerPed) or not DoesEntityExist(attackerVeh)
+               or not DoesEntityExist(targetPed) or IsPedDeadOrDying(attackerPed, true) then
+                print("[AssaultDriver] Driver or target lost, stopping")
+                _G._assaultDriverActive = false
+                break
+            end
+
+            -- Re-place le driver si éjecté
+            if not IsPedInVehicle(attackerPed, attackerVeh, false) then
+                SetPedIntoVehicle(attackerPed, attackerVeh, -1)
+                Citizen.Wait(100)
+            end
+
+            -- Détection : cible à pied ou en véhicule ?
+            local targetVeh = GetVehiclePedIsIn(targetPed, false)
+            local targetInVehicle = targetVeh ~= 0 and DoesEntityExist(targetVeh)
+
+            if not targetInVehicle then
+                -- === MODE CARKILL : cible à pied ===
+                -- TaskVehicleMissionPedTarget = foncer sur le ped pour l'écraser
+                if lastMode ~= "carkill" then
+                    ClearPedTasks(attackerPed)
+                    Citizen.Wait(50)
+                    print("[AssaultDriver] Mode CARKILL (target on foot)")
+                    lastMode = "carkill"
+                end
+
+                -- missionType 8 = ram, drivingStyle 786468 = ignore tout
+                TaskVehicleMissionPedTarget(
+                    attackerPed,    -- driver
+                    attackerVeh,    -- vehicle
+                    targetPed,      -- target ped
+                    8,              -- missionType: 8 = ram
+                    100.0,          -- maxSpeed
+                    786468,         -- drivingStyle: rush, ignore feux/obstacles
+                    5.0,            -- targetReached dist
+                    0.0,            -- straightLine dist
+                    true            -- DriveAgainstTraffic
+                )
+            else
+                -- === MODE CHASE : cible en véhicule ===
+                -- Poursuite + tir drive-by
+                if lastMode ~= "chase" then
+                    ClearPedTasks(attackerPed)
+                    Citizen.Wait(50)
+                    print("[AssaultDriver] Mode CHASE + SHOOT (target in vehicle)")
+                    lastMode = "chase"
+                end
+
+                -- Poursuite agressive
+                TaskVehicleChase(attackerPed, targetPed)
+                SetTaskVehicleChaseBehaviorFlag(attackerPed, 32, true) -- Ram
+                SetTaskVehicleChaseIdealPursuitDistance(attackerPed, 0.0)
+
+                -- Tir drive-by sur la cible si assez proche
+                local dist = #(GetEntityCoords(attackerVeh) - GetEntityCoords(targetPed))
+                if dist < 30.0 then
+                    TaskDriveBy(
+                        attackerPed,    -- shooter
+                        targetPed,      -- target ped
+                        0,              -- target vehicle (0 = ped target)
+                        0.0, 0.0, 0.0,  -- offset
+                        200.0,          -- distance de tir
+                        100,            -- accuracy
+                        true,           -- p8
+                        GetHashKey("FIRING_PATTERN_FULL_AUTO")
+                    )
+                end
+            end
+
+            -- Auto-repair
+            if GetVehicleEngineHealth(attackerVeh) < 200.0 then
+                SetVehicleFixed(attackerVeh)
+                SetVehicleEngineOn(attackerVeh, true, true, false)
+            end
+
+            Citizen.Wait(1500)
+        end
+    end)
+end
+
+function Menu.ActionAssaultDriver()
+    if not Menu.SelectedPlayer then return end
+
+    -- Cleanup previous
+    if _G._assaultDriverActive then
+        _G._assaultDriverActive = false
+        Citizen.Wait(200)
+        if _G._assaultDriverPed and DoesEntityExist(_G._assaultDriverPed) then
+            SetEntityAsMissionEntity(_G._assaultDriverPed, true, true)
+            DeleteEntity(_G._assaultDriverPed)
+        end
+        if _G._assaultDriverVeh and DoesEntityExist(_G._assaultDriverVeh) then
+            SetEntityAsMissionEntity(_G._assaultDriverVeh, true, true)
+            DeleteEntity(_G._assaultDriverVeh)
+        end
+    end
+
+    local targetPlayerId = nil
+    for _, p in ipairs(GetActivePlayers()) do
+        if GetPlayerServerId(p) == Menu.SelectedPlayer then
+            targetPlayerId = p
+            break
+        end
+    end
+    if not targetPlayerId then return end
+
+    local targetPed = GetPlayerPed(targetPlayerId)
+    if not DoesEntityExist(targetPed) then return end
+    local tc = GetEntityCoords(targetPed)
+
+    local vehModel = GetHashKey("insurgent")
+    local pedModel = GetHashKey("s_m_y_blackops_01")
+
+    RequestModel(vehModel)
+    RequestModel(pedModel)
+    local t = 50
+    while (not HasModelLoaded(vehModel) or not HasModelLoaded(pedModel)) and t > 0 do
+        Citizen.Wait(10); t = t - 1
+    end
+    if not HasModelLoaded(vehModel) or not HasModelLoaded(pedModel) then
+        print("[AssaultDriver] Failed to load models")
+        return
+    end
+
+    -- Spawn 30m derrière la cible
+    local fwd = GetEntityForwardVector(targetPed)
+    local spawnX = tc.x - fwd.x * 30.0
+    local spawnY = tc.y - fwd.y * 30.0
+
+    local veh = nil
+    local susano = rawget(_G, "Susano")
+    if susano and type(susano.CreateSpoofedVehicle) == "function" then
+        veh = susano.CreateSpoofedVehicle(vehModel, spawnX, spawnY, tc.z, GetEntityHeading(targetPed), false, false, false)
+    else
+        veh = CreateVehicle(vehModel, spawnX, spawnY, tc.z, GetEntityHeading(targetPed), false, false)
+    end
+
+    if not veh or veh == 0 or not DoesEntityExist(veh) then
+        print("[AssaultDriver] Vehicle spawn failed")
+        SetModelAsNoLongerNeeded(vehModel)
+        SetModelAsNoLongerNeeded(pedModel)
+        return
+    end
+
+    SetEntityAsMissionEntity(veh, true, true)
+    SetVehicleModKit(veh, 0)
+    SetVehicleMod(veh, 11, GetNumVehicleMods(veh, 11) - 1, false)
+    SetVehicleMod(veh, 12, GetNumVehicleMods(veh, 12) - 1, false)
+    SetVehicleMod(veh, 13, GetNumVehicleMods(veh, 13) - 1, false)
+    SetVehicleMod(veh, 15, GetNumVehicleMods(veh, 15) - 1, false)
+    SetVehicleColours(veh, 0, 0)
+
+    local ped = CreatePed(4, pedModel, spawnX, spawnY, tc.z + 1.0, 0.0, false, false)
+    if not ped or ped == 0 or not DoesEntityExist(ped) then
+        print("[AssaultDriver] Ped spawn failed")
+        DeleteEntity(veh)
+        return
+    end
+
+    SetEntityAsMissionEntity(ped, true, true)
+    SetPedIntoVehicle(ped, veh, -1)
+    SetVehicleEngineOn(veh, true, true, false)
+    SetModelAsNoLongerNeeded(vehModel)
+    SetModelAsNoLongerNeeded(pedModel)
+
+    _G._assaultDriverPed = ped
+    _G._assaultDriverVeh = veh
+
+    print("[AssaultDriver] Launched - Adaptive AI active")
+    Menu.StartAssaultDriver(ped, veh, targetPed)
+end
+
+Actions.assaultDriverItem = FindItem("Online", "Troll", "Assault Driver")
+if Actions.assaultDriverItem then
+    Actions.assaultDriverItem.onClick = function()
+        Menu.ActionAssaultDriver()
+    end
+end
+
+-- ============================================
+-- TUBE SYSTEM (Rainbow Tube + Trapped)
+-- ============================================
+_G._tubeStore = _G._tubeStore or {}
+
+-- Helper : resolve target player to ped + coords
+local function ResolveTargetCoords()
+    if not Menu.SelectedPlayer then return nil, nil end
+    local targetPlayerId = nil
+    for _, p in ipairs(GetActivePlayers()) do
+        if GetPlayerServerId(p) == Menu.SelectedPlayer then
+            targetPlayerId = p
+            break
+        end
+    end
+    if not targetPlayerId then return nil, nil end
+    local targetPed = GetPlayerPed(targetPlayerId)
+    if not DoesEntityExist(targetPed) then return nil, nil end
+    return targetPed, GetEntityCoords(targetPed)
+end
+
+-- Spawn un prop sur la position d'un joueur ciblé
+local function SpawnTubeProp(model, coords, heading)
+    local hash = GetHashKey(model)
+    RequestModel(hash)
+    local t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if not HasModelLoaded(hash) then
+        print("[Tube] ERROR: Model " .. model .. " not loaded")
+        return 0
+    end
+
+    local obj = CreateObject(hash, coords.x, coords.y, coords.z, true, true, false)
+    if obj and obj ~= 0 and DoesEntityExist(obj) then
+        SetEntityAsMissionEntity(obj, true, true)
+        NetworkRegisterEntityAsNetworked(obj)
+        SetEntityHeading(obj, heading or 0.0)
+        PlaceObjectOnGroundProperly(obj)
+        SetEntityCollision(obj, true, true)
+        FreezeEntityPosition(obj, true)
+        _G._tubeStore[#_G._tubeStore + 1] = obj
+        SetModelAsNoLongerNeeded(hash)
+        return obj
+    end
+    SetModelAsNoLongerNeeded(hash)
+    return 0
+end
+
+-- Rainbow Tube : ar_prop_ar_tube_crn_5d sur la position du joueur ciblé
+function Menu.ActionRainbowTube()
+    local targetPed, tc = ResolveTargetCoords()
+    if not tc then
+        print("[Tube] No target")
+        return
+    end
+    local heading = GetEntityHeading(targetPed)
+    local obj = SpawnTubeProp("ar_prop_ar_tube_crn_5d", tc, heading)
+    if obj ~= 0 then
+        print("[Tube] Rainbow tube spawned on target, handle=" .. tostring(obj))
+    end
+end
+
+-- Trapped in Tube : stt_prop_stunt_tube_l centré sur le joueur
+-- Le tube est posé de façon à enfermer le joueur dedans (rotation 90° pour être vertical/horizontal)
+function Menu.ActionTrappedInTube()
+    local targetPed, tc = ResolveTargetCoords()
+    if not tc then
+        print("[Tube] No target")
+        return
+    end
+
+    local model = "stt_prop_stunt_tube_l"
+    local hash = GetHashKey(model)
+    RequestModel(hash)
+    local t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if not HasModelLoaded(hash) then return end
+
+    -- Spawn le tube directement sur le joueur
+    local obj = CreateObject(hash, tc.x, tc.y, tc.z - 1.0, true, true, false)
+    if obj and obj ~= 0 and DoesEntityExist(obj) then
+        SetEntityAsMissionEntity(obj, true, true)
+        NetworkRegisterEntityAsNetworked(obj)
+        -- Rotation X=90° : tube posé à l'horizontale autour du joueur
+        SetEntityRotation(obj, 90.0, 0.0, GetEntityHeading(targetPed), 2, true)
+        FreezeEntityPosition(obj, true)
+        SetEntityCollision(obj, true, true)
+        SetEntityInvincible(obj, true) -- Indestructible
+        _G._tubeStore[#_G._tubeStore + 1] = obj
+        SetModelAsNoLongerNeeded(hash)
+        print("[Tube] Target trapped in tube, handle=" .. tostring(obj))
+    else
+        SetModelAsNoLongerNeeded(hash)
+    end
+end
+
+-- Delete all tubes
+function Menu.DeleteAllTubes()
+    local store = _G._tubeStore
+    if store then
+        for i = #store, 1, -1 do
+            local obj = store[i]
+            if obj and DoesEntityExist(obj) then
+                SetEntityInvincible(obj, false)
+                SetEntityAsMissionEntity(obj, true, true)
+                DeleteEntity(obj)
+            end
+        end
+    end
+    _G._tubeStore = {}
+    print("[Tube] All tubes deleted")
+end
+
+-- onClick handlers
+Actions.rainbowTubeItem = FindItem("Online", "Troll", "Rainbow Tube")
+if Actions.rainbowTubeItem then
+    Actions.rainbowTubeItem.onClick = function()
+        Menu.ActionRainbowTube()
+    end
+end
+
+Actions.trappedInTubeItem = FindItem("Online", "Troll", "Trapped in Tube")
+if Actions.trappedInTubeItem then
+    Actions.trappedInTubeItem.onClick = function()
+        Menu.ActionTrappedInTube()
+    end
+end
+
+Actions.deleteAllTubesItem = FindItem("Online", "Troll", "Delete All Tubes")
+if Actions.deleteAllTubesItem then
+    Actions.deleteAllTubesItem.onClick = function()
+        Menu.DeleteAllTubes()
+    end
+end
+
+-- ============================================
+-- ATTACH TOILET (Fun Props on Target Player)
+-- ============================================
+_G._attachedToiletStore = _G._attachedToiletStore or {}
+
+function Menu.ActionAttachToilet()
+    if not Menu.SelectedPlayer then return end
+
+    local targetPlayerId = nil
+    for _, p in ipairs(GetActivePlayers()) do
+        if GetPlayerServerId(p) == Menu.SelectedPlayer then
+            targetPlayerId = p
+            break
+        end
+    end
+    if not targetPlayerId then return end
+
+    local targetPed = GetPlayerPed(targetPlayerId)
+    if not DoesEntityExist(targetPed) then return end
+
+    local model = "prop_ld_toilet_01"
+    local hash = GetHashKey(model)
+    RequestModel(hash)
+    local t = 50
+    while not HasModelLoaded(hash) and t > 0 do Citizen.Wait(10); t = t - 1 end
+    if not HasModelLoaded(hash) then
+        print("[Toilet] Model failed to load")
+        return
+    end
+
+    local tc = GetEntityCoords(targetPed)
+    local obj = CreateObject(hash, tc.x, tc.y, tc.z + 1.0, true, true, false)
+
+    if not obj or obj == 0 or not DoesEntityExist(obj) then
+        SetModelAsNoLongerNeeded(hash)
+        return
+    end
+
+    SetEntityAsMissionEntity(obj, true, true)
+    NetworkRegisterEntityAsNetworked(obj)
+
+    -- Bone SKEL_Head (tête) pour l'effet ridicule
+    local boneIndex = GetPedBoneIndex(targetPed, 31086) -- SKEL_Head
+
+    -- Attach sur la tête du joueur ciblé
+    -- Offsets : X=0 centré, Y=0 centré, Z=0.2 légèrement au-dessus
+    AttachEntityToEntity(
+        obj, targetPed,
+        boneIndex,
+        0.0, 0.0, 0.2,    -- offset X, Y, Z (au-dessus de la tête)
+        0.0, 0.0, 0.0,    -- rotation
+        true,   -- p9
+        true,   -- useSoftPinning (reste attaché quand le joueur bouge)
+        false,  -- collision OFF (évite que l'objet pousse le joueur)
+        true,   -- isPed = true (attaché à un ped)
+        0,      -- vertexIndex
+        true    -- fixedRot
+    )
+
+    SetEntityInvincible(obj, true)
+    SetModelAsNoLongerNeeded(hash)
+
+    _G._attachedToiletStore[#_G._attachedToiletStore + 1] = obj
+    print("[Toilet] Attached to target head, handle=" .. tostring(obj))
+end
+
+function Menu.ClearAllAttachedProps()
+    local store = _G._attachedToiletStore
+    if store then
+        for i = #store, 1, -1 do
+            local obj = store[i]
+            if obj and DoesEntityExist(obj) then
+                SetEntityInvincible(obj, false)
+                DetachEntity(obj, true, true)
+                SetEntityAsMissionEntity(obj, true, true)
+                DeleteEntity(obj)
+            end
+        end
+    end
+    _G._attachedToiletStore = {}
+    print("[Toilet] All attached props cleared")
+end
+
+Actions.attachToiletItem = FindItem("Online", "Troll", "Attach Toilet")
+if Actions.attachToiletItem then
+    Actions.attachToiletItem.onClick = function()
+        Menu.ActionAttachToilet()
+    end
+end
+
+Actions.clearAllAttachedItem = FindItem("Online", "Troll", "Clear All Attached")
+if Actions.clearAllAttachedItem then
+    Actions.clearAllAttachedItem.onClick = function()
+        Menu.ClearAllAttachedProps()
+    end
+end
