@@ -28,11 +28,83 @@ if string.find(LibraryCode, "Susano%.ResetFrame") then
     LibraryCode = string.gsub(LibraryCode, "if Susano%.ResetFrame then", "if Susano.ResetFrame and not Menu.PreventResetFrame then")
 end
 
+-- Strip \r from HTTP content for consistent pattern matching
+LibraryCode = string.gsub(LibraryCode, "\r", "")
+
 -- Patch tag display [RISK] (red) / [DYNASTY] (purple) (item name rendering)
 LibraryCode = string.gsub(
     LibraryCode,
     'Menu%.DrawText%(textX, textY, item%.name, 17, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
     'Menu.DrawText(textX, textY, item.name, 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0); if (item.risk or item.dynasty) and Susano and Susano.GetTextWidth then local _sc = 17 * (Menu.Scale or 1.0); local _ox = Susano.GetTextWidth(item.name, _sc); if item.risk then Menu.DrawText(textX + _ox, textY, "  [RISK]", 17, 1.0, 0.15, 0.15, 1.0); _ox = _ox + Susano.GetTextWidth("  [RISK]", _sc) end; if item.dynasty then Menu.DrawText(textX + _ox, textY, "  [DYNASTY]", 17, 0.6, 0.2, 1.0, 1.0) end end'
+)
+
+-- ============================================
+-- PATCH: Category icon image + bold text shadow
+-- ============================================
+-- Replaces category name rendering to:
+--   1. Draw icon texture (from iconUrl) left of text
+--   2. Add 1px shadow for bold effect
+--   3. Shift text right to make room for icon
+LibraryCode = string.gsub(
+    LibraryCode,
+    'Menu%.DrawText%(textX, textY, category%.name, 17, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
+    [[do
+                local _iSz = itemHeight * 0.5
+                local _iOk = false
+                if category.iconUrl and Menu.IconTextures and Menu.IconTextures[category.name] then
+                    local _t = Menu.IconTextures[category.name]
+                    if _t and _t > 0 and Susano and Susano.DrawImage then
+                        Susano.DrawImage(_t, x + 14, itemY + (itemHeight - _iSz) / 2, _iSz, _iSz, 1, 1, 1, 1, 0)
+                        _iOk = true
+                    end
+                end
+                local _offX = _iOk and (14 + _iSz + 8) or 16
+                textX = x + _offX
+                local _wr = Menu.Colors.TextWhite.r / 255.0
+                local _wg = Menu.Colors.TextWhite.g / 255.0
+                local _wb = Menu.Colors.TextWhite.b / 255.0
+                Menu.DrawText(textX + 1, textY, category.name, 17, 0, 0, 0, 0.3)
+                Menu.DrawText(textX, textY, category.name, 17, _wr, _wg, _wb, 1.0)
+            end]]
+)
+
+-- ============================================
+-- PATCH: Chevron >> replaced by clean >
+-- ============================================
+LibraryCode = string.gsub(
+    LibraryCode,
+    'local chevronX = x %+ width %- 22\n            Menu%.DrawText%(chevronX, textY, ">", 17, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
+    [[local chevronX = x + width - 36
+            local _wr2 = Menu.Colors.TextWhite.r / 255.0
+            local _wg2 = Menu.Colors.TextWhite.g / 255.0
+            local _wb2 = Menu.Colors.TextWhite.b / 255.0
+            Menu.DrawText(chevronX + 1, textY, ">>", 14, 0, 0, 0, 0.25)
+            Menu.DrawText(chevronX, textY, ">>", 14, _wr2, _wg2, _wb2, 0.55)]]
+)
+
+-- ============================================
+-- PATCH: Footer text + centered logo image
+-- ============================================
+-- Replace the hardcoded footer text with configurable Menu.FooterText
+-- and add centered logo drawing
+LibraryCode = string.gsub(
+    LibraryCode,
+    'local footerText = "BusDansTete X Juro"',
+    'local footerText = Menu.FooterText or "Dynasty"'
+)
+
+-- Inject logo drawing right after footer left-text rendering
+-- Match the unique line that draws the footer left text, then append logo code
+LibraryCode = string.gsub(
+    LibraryCode,
+    '(Menu%.DrawText%(currentX, footerTextY, footerText, footerSize, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%))',
+    [[%1
+    if Menu.FooterLogoTex and Menu.FooterLogoTex > 0 and Susano and Susano.DrawImage then
+        local _lSz = footerHeight * 0.7
+        local _lX = x + (footerWidth / 2) - (_lSz / 2)
+        local _lY = footerY + (footerHeight - _lSz) / 2
+        Susano.DrawImage(Menu.FooterLogoTex, _lX, _lY, _lSz, _lSz, 1, 1, 1, 1, 0)
+    end]]
 )
 
 local chunk, err = load(LibraryCode)
@@ -42,6 +114,72 @@ if not chunk then
 end
 
 local Menu = chunk()
+
+-- ============================================
+-- ICON TEXTURE SYSTEM
+-- ============================================
+-- Cache for category icon textures loaded from URLs
+Menu.IconTextures = {}
+Menu.FooterLogoTex = nil
+Menu.FooterText = "Dynasty" -- <<< CHANGE THIS to your menu name
+
+-- Footer logo URL (small square image, ideally 64x64 or 128x128 PNG)
+Menu.FooterLogoUrl = "https://i.imgur.com/PLACEHOLDER_FOOTER_LOGO.png" -- <<< REPLACE with your logo URL
+
+-- Load a single icon texture from URL, store in Menu.IconTextures[name]
+function Menu.LoadIconTexture(name, url)
+    if not url or url == "" then return end
+    if not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
+    if Menu.IconTextures[name] and Menu.IconTextures[name] > 0 then return end -- already loaded
+
+    CreateThread(function()
+        local ok, result = pcall(function()
+            local status, body = Susano.HttpGet(url)
+            if status == 200 and body and #body > 100 then
+                local texId, w, h = Susano.LoadTextureFromBuffer(body)
+                if texId and texId ~= 0 then
+                    Menu.IconTextures[name] = texId
+                    print("[Icons] Loaded: " .. name .. " (tex=" .. tostring(texId) .. ")")
+                end
+            else
+                print("[Icons] HTTP " .. tostring(status) .. " for " .. name)
+            end
+        end)
+        if not ok then
+            print("[Icons] Error loading " .. name .. ": " .. tostring(result))
+        end
+    end)
+end
+
+-- Load footer logo texture
+function Menu.LoadFooterLogo(url)
+    if not url or url == "" or url:find("PLACEHOLDER") then return end
+    if not Susano or not Susano.HttpGet or not Susano.LoadTextureFromBuffer then return end
+
+    CreateThread(function()
+        local ok, result = pcall(function()
+            local status, body = Susano.HttpGet(url)
+            if status == 200 and body and #body > 100 then
+                local texId, w, h = Susano.LoadTextureFromBuffer(body)
+                if texId and texId ~= 0 then
+                    Menu.FooterLogoTex = texId
+                    print("[Footer] Logo loaded (tex=" .. tostring(texId) .. ")")
+                end
+            end
+        end)
+    end)
+end
+
+-- Init: load all icon textures at startup
+function Menu.LoadAllIcons()
+    if not Menu.Categories then return end
+    for _, cat in ipairs(Menu.Categories) do
+        if cat.iconUrl and cat.iconUrl ~= "" and not cat.iconUrl:find("PLACEHOLDER") then
+            Menu.LoadIconTexture(cat.name, cat.iconUrl)
+        end
+    end
+    Menu.LoadFooterLogo(Menu.FooterLogoUrl)
+end
 
 Menu.DrawWatermark = function() end
 Menu.UpdatePlayerCount = function() end
@@ -509,7 +647,7 @@ end
 
 Menu.Categories = {
     { name = "Main Menu", icon = "P" },
-    { name = "Player", icon = "ðŸ‘¤", hasTabs = true, tabs = {
+    { name = "Player", iconUrl = "https://i.imgur.com/BeN6xxM.png", icon = "ðŸ‘¤", hasTabs = true, tabs = {
         { name = "Self", items = {
             { name = "", isSeparator = true, separatorText = "Health" },
             { name = "Revive", type = "action" },
@@ -535,7 +673,7 @@ Menu.Categories = {
             { name = "Shoes", type = "selector", options = {}, selected = 1 }
         }}
     }},
-    { name = "Online", icon = "ðŸ‘¥", hasTabs = true, tabs = {
+    { name = "Online", iconUrl = "https://i.imgur.com/Z48qsgf.png", icon = "ðŸ‘¥", hasTabs = true, tabs = {
         { name = "Player List", items = {
             { name = "Loading players...", type = "action" }
         }},
@@ -618,7 +756,7 @@ Menu.Categories = {
             { name = "Launch All", type = "action" }
         }}
     }},
-    { name = "Visual", icon = "ðŸ‘", hasTabs = true, tabs = {
+    { name = "Visual", iconUrl = "https://i.imgur.com/zVhRglY.png", icon = "ðŸ‘", hasTabs = true, tabs = {
         { name = "World", items = {
             { name = "FPS Boost", type = "toggle", value = false },
             { name = "Time", type = "slider", value = 12.0, min = 0.0, max = 23.0 },
@@ -629,7 +767,7 @@ Menu.Categories = {
             { name = "Delete All Props", type = "action" }
         }}
     }},
-    { name = "Combat", icon = "ðŸ”«", hasTabs = true, tabs = {
+    { name = "Combat", iconUrl = "https://i.imgur.com/cKrFEUF.png", icon = "ðŸ”«", hasTabs = true, tabs = {
         { name = "General", items = {
             { name = "Attach Target (H)", type = "toggle", value = false, onClick = function(val) ToggleAttachTarget(val) end },
             { name = "", isSeparator = true, separatorText = "Weapon Mods" },
@@ -665,7 +803,7 @@ Menu.Categories = {
             { name = "give weapon_hk_ump", type = "action" }
         }}
     }},
-    { name = "Vehicle", icon = "ðŸš—", hasTabs = true, tabs = {
+    { name = "Vehicle", iconUrl = "https://i.imgur.com/fVhvYH5.png", icon = "ðŸš—", hasTabs = true, tabs = {
         { name = "Performance", items = {
             { name = "", isSeparator = true, separatorText = "Warp" },
             { name = "FOV Warp", type = "toggle", value = false, onClick = function(val) Menu.FOVWarp = val end },
@@ -845,7 +983,7 @@ Menu.Categories = {
             end }
         }}
     }},
-    { name = "Exploit", icon = "💀", hasTabs = true, tabs = {
+    { name = "Exploit", iconUrl = "https://i.imgur.com/V478dNC.png", icon = "💀", hasTabs = true, tabs = {
         { name = "Exploits", items = {
             { name = "", isSeparator = true, separatorText = "Server" },
             { name = "Staff Mode", type = "toggle", value = false, dynasty = true},
@@ -867,7 +1005,7 @@ Menu.Categories = {
             { name = "Bypass Putin", type = "action", dynasty = true },
         }}
     }},
-    { name = "Settings", icon = "âš™", hasTabs = true, tabs = {
+    { name = "Settings", iconUrl = "https://i.imgur.com/nXiJjDR.png", icon = "âš™", hasTabs = true, tabs = {
         { name = "General", items = {
             { name = "Editor Mode", type = "toggle", value = false },
             { name = "Menu Size", type = "slider", value = 100.0, min = 50.0, max = 200.0, step = 1.0 },
@@ -893,6 +1031,9 @@ Menu.Categories = {
 if Menu.ApplyTheme then
     Menu.ApplyTheme("Green")
 end
+
+-- Load category icons + footer logo after categories are defined
+Menu.LoadAllIcons()
 
 Menu.Visible = false
 
