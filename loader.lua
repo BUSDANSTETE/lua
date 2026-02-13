@@ -1020,7 +1020,7 @@ Menu.Categories = {
             { name = "Editor Mode", type = "toggle", value = false },
             { name = "Menu Size", type = "slider", value = 110.0, min = 50.0, max = 200.0, step = 1.0 },
             { name = "", isSeparator = true, separatorText = "Design" },
-            { name = "Menu Theme", type = "selector", options = {"Purple", "pink", "Red", "Green"}, selected = 4 },
+            { name = "Menu Theme", type = "selector", options = {"Korium", "Green", "Red", "Purple", "White"}, selected = 1 },
             { name = "Flocon", type = "toggle", value = true },
             { name = "Gradient", type = "selector", options = {"1", "2"}, selected = 1 },
             { name = "Scroll Bar Position", type = "selector", options = {"Left", "Right"}, selected = 1 },
@@ -1039,7 +1039,7 @@ Menu.Categories = {
 
 -- Appliquer le thÃ¨me rouge par dÃ©faut au dÃ©marrage
 if Menu.ApplyTheme then
-    Menu.ApplyTheme("Green")
+    Menu.ApplyTheme("Korium")
 end
 
 -- Load category icons + footer logo
