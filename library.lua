@@ -160,7 +160,7 @@ Menu.Position = {
     itemHeight = 34,
     mainMenuHeight = 26,
     headerHeight = 100,
-    footerHeight = 35,
+    footerHeight = 26,
     footerSpacing = 5,
     mainMenuSpacing = 5,
     footerRadius = 4,
@@ -2934,3 +2934,5 @@ end
 
 
 return Menu
+
+
