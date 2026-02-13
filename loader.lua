@@ -1018,7 +1018,7 @@ Menu.Categories = {
     { name = "Settings", icon = "âš™", iconUrl = "https://i.imgur.com/PLACEHOLDER_SETTINGS.png", hasTabs = true, tabs = {
         { name = "General", items = {
             { name = "Editor Mode", type = "toggle", value = false },
-            { name = "Menu Size", type = "slider", value = 110.0, min = 50.0, max = 200.0, step = 1.0 },
+            { name = "Menu Size", type = "slider", value = 105.0, min = 50.0, max = 200.0, step = 1.0 },
             { name = "", isSeparator = true, separatorText = "Design" },
             { name = "Menu Theme", type = "selector", options = {"Korium", "Green", "Red", "Purple", "White"}, selected = 1 },
             { name = "Flocon", type = "toggle", value = true },
@@ -1046,7 +1046,7 @@ end
 Menu.LoadAllIcons()
 
 -- Korium default scale
-Menu.Scale = 1.1
+Menu.Scale = 1.05
 
 Menu.Visible = false
 
