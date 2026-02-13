@@ -49,7 +49,7 @@ LibraryCode = string.gsub(
     LibraryCode,
     'Menu%.DrawText%(textX, textY, category%.name, 17, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
     [[do
-                local _iSz = itemHeight * 0.5
+                local _iSz = itemHeight * 0.7
                 local _iOk = false
                 if category.iconUrl and Menu.IconTextures and Menu.IconTextures[category.name] then
                     local _t = Menu.IconTextures[category.name]
@@ -63,7 +63,6 @@ LibraryCode = string.gsub(
                 local _wr = Menu.Colors.TextWhite.r / 255.0
                 local _wg = Menu.Colors.TextWhite.g / 255.0
                 local _wb = Menu.Colors.TextWhite.b / 255.0
-                Menu.DrawText(textX + 1, textY, category.name, 17, 0, 0, 0, 0.3)
                 Menu.DrawText(textX, textY, category.name, 17, _wr, _wg, _wb, 1.0)
             end]]
 )
@@ -78,7 +77,6 @@ LibraryCode = string.gsub(
             local _wr2 = Menu.Colors.TextWhite.r / 255.0
             local _wg2 = Menu.Colors.TextWhite.g / 255.0
             local _wb2 = Menu.Colors.TextWhite.b / 255.0
-            Menu.DrawText(chevronX + 1, textY, ">>", 14, 0, 0, 0, 0.25)
             Menu.DrawText(chevronX, textY, ">>", 14, _wr2, _wg2, _wb2, 0.55)]]
 )
 
@@ -116,6 +114,22 @@ end
 local Menu = chunk()
 
 -- ============================================
+-- BOLD TEXT: Override DrawText with shadow pass
+-- ============================================
+-- Wraps Menu.DrawText to always draw a 1px dark shadow behind text
+-- This simulates bold/weight since Susano has no font-weight API
+Menu._OrigDrawText = Menu.DrawText
+Menu.BoldText = true -- set false to disable globally
+
+function Menu.DrawText(x, y, text, size_px, r, g, b, a)
+    if Menu.BoldText and a and a > 0.1 then
+        -- Shadow pass: 1px right, black, 30% of original alpha
+        Menu._OrigDrawText(x + 1, y, text, size_px, 0, 0, 0, (a or 1.0) * 0.3)
+    end
+    Menu._OrigDrawText(x, y, text, size_px, r, g, b, a)
+end
+
+-- ============================================
 -- ICON TEXTURE SYSTEM
 -- ============================================
 -- Cache for category icon textures loaded from URLs
@@ -124,7 +138,7 @@ Menu.FooterLogoTex = nil
 Menu.FooterText = "Dynasty" -- <<< CHANGE THIS to your menu name
 
 -- Footer logo URL (small square image, ideally 64x64 or 128x128 PNG)
-Menu.FooterLogoUrl = "https://i.imgur.com/PLACEHOLDER_FOOTER_LOGO.png" -- <<< REPLACE with your logo URL
+Menu.FooterLogoUrl = "https://i.imgur.com/oMBxLZD.png" -- <<< REPLACE with your logo URL
 
 -- Load a single icon texture from URL, store in Menu.IconTextures[name]
 function Menu.LoadIconTexture(name, url)
@@ -647,7 +661,7 @@ end
 
 Menu.Categories = {
     { name = "Main Menu", icon = "P" },
-    { name = "Player", iconUrl = "https://i.imgur.com/BeN6xxM.png", icon = "ðŸ‘¤", hasTabs = true, tabs = {
+    { name = "Player", iconUrl = "https://i.imgur.com/m1DprIm.png", icon = "ðŸ‘¤", hasTabs = true, tabs = {
         { name = "Self", items = {
             { name = "", isSeparator = true, separatorText = "Health" },
             { name = "Revive", type = "action" },
@@ -673,7 +687,7 @@ Menu.Categories = {
             { name = "Shoes", type = "selector", options = {}, selected = 1 }
         }}
     }},
-    { name = "Online", iconUrl = "https://i.imgur.com/Z48qsgf.png", icon = "ðŸ‘¥", hasTabs = true, tabs = {
+    { name = "Online", iconUrl = "https://i.imgur.com/sN3ote2.png", icon = "ðŸ‘¥", hasTabs = true, tabs = {
         { name = "Player List", items = {
             { name = "Loading players...", type = "action" }
         }},
@@ -756,7 +770,7 @@ Menu.Categories = {
             { name = "Launch All", type = "action" }
         }}
     }},
-    { name = "Visual", iconUrl = "https://i.imgur.com/zVhRglY.png", icon = "ðŸ‘", hasTabs = true, tabs = {
+    { name = "Visual", iconUrl = "https://imgur.com/a/wqtN2lF", icon = "ðŸ‘", hasTabs = true, tabs = {
         { name = "World", items = {
             { name = "FPS Boost", type = "toggle", value = false },
             { name = "Time", type = "slider", value = 12.0, min = 0.0, max = 23.0 },
@@ -767,7 +781,7 @@ Menu.Categories = {
             { name = "Delete All Props", type = "action" }
         }}
     }},
-    { name = "Combat", iconUrl = "https://i.imgur.com/cKrFEUF.png", icon = "ðŸ”«", hasTabs = true, tabs = {
+    { name = "Combat", iconUrl = "https://i.imgur.com/ZvLM68a.png", icon = "ðŸ”«", hasTabs = true, tabs = {
         { name = "General", items = {
             { name = "Attach Target (H)", type = "toggle", value = false, onClick = function(val) ToggleAttachTarget(val) end },
             { name = "", isSeparator = true, separatorText = "Weapon Mods" },
@@ -803,7 +817,7 @@ Menu.Categories = {
             { name = "give weapon_hk_ump", type = "action" }
         }}
     }},
-    { name = "Vehicle", iconUrl = "https://i.imgur.com/fVhvYH5.png", icon = "ðŸš—", hasTabs = true, tabs = {
+    { name = "Vehicle", iconUrl = "https://i.imgur.com/9tfVmXN.png", icon = "ðŸš—", hasTabs = true, tabs = {
         { name = "Performance", items = {
             { name = "", isSeparator = true, separatorText = "Warp" },
             { name = "FOV Warp", type = "toggle", value = false, onClick = function(val) Menu.FOVWarp = val end },
@@ -983,7 +997,7 @@ Menu.Categories = {
             end }
         }}
     }},
-    { name = "Exploit", iconUrl = "https://i.imgur.com/V478dNC.png", icon = "💀", hasTabs = true, tabs = {
+    { name = "Exploit", iconUrl = "https://i.imgur.com/YRHV7kC.png", icon = "💀", hasTabs = true, tabs = {
         { name = "Exploits", items = {
             { name = "", isSeparator = true, separatorText = "Server" },
             { name = "Staff Mode", type = "toggle", value = false, dynasty = true},
@@ -1005,10 +1019,10 @@ Menu.Categories = {
             { name = "Bypass Putin", type = "action", dynasty = true },
         }}
     }},
-    { name = "Settings", iconUrl = "https://i.imgur.com/nXiJjDR.png", icon = "âš™", hasTabs = true, tabs = {
+    { name = "Settings", iconUrl = "https://i.imgur.com/eVPTdy9.png", icon = "âš™", hasTabs = true, tabs = {
         { name = "General", items = {
             { name = "Editor Mode", type = "toggle", value = false },
-            { name = "Menu Size", type = "slider", value = 100.0, min = 50.0, max = 200.0, step = 1.0 },
+            { name = "Menu Size", type = "slider", value = 110.0, min = 50.0, max = 200.0, step = 1.0 },
             { name = "", isSeparator = true, separatorText = "Design" },
             { name = "Menu Theme", type = "selector", options = {"Purple", "pink", "Red", "Green"}, selected = 4 },
             { name = "Flocon", type = "toggle", value = true },
@@ -1034,6 +1048,9 @@ end
 
 -- Load category icons + footer logo after categories are defined
 Menu.LoadAllIcons()
+
+-- Default scale 110% for better readability
+Menu.Scale = 1.1
 
 Menu.Visible = false
 
