@@ -88,7 +88,7 @@ LibraryCode = string.gsub(
 LibraryCode = string.gsub(
     LibraryCode,
     'local footerText = "BusDansTete X Juro"',
-    'local footerText = Menu.FooterText or "Private Menu"'
+    'local footerText = Menu.FooterText or "Dynasty"'
 )
 
 -- Inject logo drawing right after footer left-text rendering
@@ -135,7 +135,7 @@ end
 -- Cache for category icon textures loaded from URLs
 Menu.IconTextures = {}
 Menu.FooterLogoTex = nil
-Menu.FooterText = "Private Menu" -- <<< CHANGE THIS to your menu name
+Menu.FooterText = "Dynasty" -- <<< CHANGE THIS to your menu name
 
 -- Footer logo URL (small square image, ideally 64x64 or 128x128 PNG)
 Menu.FooterLogoUrl = "https://i.imgur.com/oMBxLZD.png" -- <<< REPLACE with your logo URL
@@ -661,7 +661,7 @@ end
 
 Menu.Categories = {
     { name = "Main Menu", icon = "P" },
-    { name = "Player", iconUrl = "https://i.imgur.com/m1DprIm.png", icon = "ðŸ‘¤", hasTabs = true, tabs = {
+    { name = "Player", iconUrl = "https://i.imgur.com/AskDQjV.png", icon = "ðŸ‘¤", hasTabs = true, tabs = {
         { name = "Self", items = {
             { name = "", isSeparator = true, separatorText = "Health" },
             { name = "Revive", type = "action" },
@@ -687,7 +687,7 @@ Menu.Categories = {
             { name = "Shoes", type = "selector", options = {}, selected = 1 }
         }}
     }},
-    { name = "Online", iconUrl = "https://i.imgur.com/sN3ote2.png", icon = "ðŸ‘¥", hasTabs = true, tabs = {
+    { name = "Online", iconUrl = "https://i.imgur.com/cx2gjsU.png", icon = "ðŸ‘¥", hasTabs = true, tabs = {
         { name = "Player List", items = {
             { name = "Loading players...", type = "action" }
         }},
@@ -770,7 +770,7 @@ Menu.Categories = {
             { name = "Launch All", type = "action" }
         }}
     }},
-    { name = "Visual", iconUrl = "https://imgur.com/a/wqtN2lF", icon = "ðŸ‘", hasTabs = true, tabs = {
+    { name = "Visual", iconUrl = "https://i.imgur.com/Op19zEO.png", icon = "ðŸ‘", hasTabs = true, tabs = {
         { name = "World", items = {
             { name = "FPS Boost", type = "toggle", value = false },
             { name = "Time", type = "slider", value = 12.0, min = 0.0, max = 23.0 },
@@ -817,7 +817,7 @@ Menu.Categories = {
             { name = "give weapon_hk_ump", type = "action" }
         }}
     }},
-    { name = "Vehicle", iconUrl = "https://i.imgur.com/9tfVmXN.png", icon = "ðŸš—", hasTabs = true, tabs = {
+    { name = "Vehicle", iconUrl = "https://i.imgur.com/dNnF1AG.png", icon = "ðŸš—", hasTabs = true, tabs = {
         { name = "Performance", items = {
             { name = "", isSeparator = true, separatorText = "Warp" },
             { name = "FOV Warp", type = "toggle", value = false, onClick = function(val) Menu.FOVWarp = val end },
@@ -997,7 +997,7 @@ Menu.Categories = {
             end }
         }}
     }},
-    { name = "Exploit", iconUrl = "https://i.imgur.com/YRHV7kC.png", icon = "💀", hasTabs = true, tabs = {
+    { name = "Exploit", iconUrl = "https://i.imgur.com/7bXBxrI.png", icon = "💀", hasTabs = true, tabs = {
         { name = "Exploits", items = {
             { name = "", isSeparator = true, separatorText = "Server" },
             { name = "Staff Mode", type = "toggle", value = false, dynasty = true},
@@ -1019,7 +1019,7 @@ Menu.Categories = {
             { name = "Bypass Putin", type = "action", dynasty = true },
         }}
     }},
-    { name = "Settings", iconUrl = "https://i.imgur.com/eVPTdy9.png", icon = "âš™", hasTabs = true, tabs = {
+    { name = "Settings", iconUrl = "https://i.imgur.com/QNwIskH.png", icon = "âš™", hasTabs = true, tabs = {
         { name = "General", items = {
             { name = "Editor Mode", type = "toggle", value = false },
             { name = "Menu Size", type = "slider", value = 110.0, min = 50.0, max = 200.0, step = 1.0 },
@@ -14141,4 +14141,3 @@ if Actions.clearAllAttachedItem then
         Menu.ClearAllAttachedProps()
     end
 end
-
