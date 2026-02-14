@@ -49,7 +49,7 @@ LibraryCode = string.gsub(
     LibraryCode,
     'Menu%.DrawText%(textX, textY, category%.name, 17, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
     [[do
-                local _iSz = itemHeight * 0.5
+                local _iSz = itemHeight * 0.4
                 local _iOk = false
                 if category.iconUrl and Menu.IconTextures and Menu.IconTextures[category.name] then
                     local _t = Menu.IconTextures[category.name]
