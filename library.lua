@@ -1490,7 +1490,7 @@ function Menu.DrawKeybindsInterface(alpha)
 end
 
 Menu.Particles = {}
-for i = 1, 40 do
+for i = 1, 25 do
     table.insert(Menu.Particles, {
         x = math.random(0, 100) / 100,
         y = math.random(0, 100) / 100,
@@ -2631,3 +2631,4 @@ end
 
 
 return Menu
+
