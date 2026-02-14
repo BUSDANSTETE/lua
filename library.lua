@@ -147,8 +147,8 @@ function Menu.ApplyTheme(themeName)
         Menu.Colors.SelectedBg = { r = 91, g = 55, b = 131 }
         Menu.Banner.imageUrl = "https://i.imgur.com/xv46Mbz.png"
     else
-        Menu.Colors.HeaderPink = { r = 248, g = 187, b = 208 }
-        Menu.Colors.SelectedBg = { r = 248, g = 187, b = 208 }
+        Menu.Colors.HeaderPink = { r = 255, g = 20, b = 147 }
+        Menu.Colors.SelectedBg = { r = 255, g = 20, b = 147 }
         Menu.Banner.imageUrl = "https://i.imgur.com/xv46Mbz.png"
     end
 
@@ -1229,7 +1229,7 @@ function Menu.DrawFooter()
     local scaledFooterSize = footerSize * scale
     local footerTextY = footerY + math.floor((footerHeight - scaledFooterSize) / 2)
 
-    local footerText = Menu.FooterText or "BUSDANSTETE"
+    local footerText = (Menu.FooterText and Menu.FooterText ~= "") and Menu.FooterText or "BUSDANSTETE"
     local currentX = x + footerPadding
 
     local textWidth = 0
@@ -1246,7 +1246,6 @@ function Menu.DrawFooter()
     Menu.DrawText(currentX, footerTextY, footerText, footerSize, tR, tG, tB, 1.0)
     Menu.DrawText(currentX + 1, footerTextY, footerText, footerSize, tR, tG, tB, 1.0)
 
-    -- Logo footer centre (charge via Menu.LoadFooterLogo dans loader.lua)
     if Menu.FooterLogoTex and Menu.FooterLogoTex > 0 and Susano and Susano.DrawImage then
         local _lSz = footerHeight * 0.7
         local _lX = x + (footerWidth / 2) - (_lSz / 2)
@@ -1491,7 +1490,7 @@ function Menu.DrawKeybindsInterface(alpha)
 end
 
 Menu.Particles = {}
-for i = 1, 80 do
+for i = 1, 40 do
     table.insert(Menu.Particles, {
         x = math.random(0, 100) / 100,
         y = math.random(0, 100) / 100,
