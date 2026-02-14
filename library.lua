@@ -250,31 +250,38 @@ function Menu.DrawHeader()
             -- Fond noir avec coins arrondis couvrant TOUT le header (pas seulement bannerHeight)
             local bannerRadius = radius
             if Susano and Susano.DrawRectFilled then
-                Susano.DrawRectFilled(x, y, width, height, 0.176, 0.176, 0.176, 0.98, bannerRadius)
+                Susano.DrawRectFilled(x, y, width, height, 0.098, 0.098, 0.098, 0.98, bannerRadius)
             else
-                Menu.DrawTopRoundedRect(x, y, width, height, 45, 45, 45, 250, bannerRadius)
+                Menu.DrawTopRoundedRect(x, y, width, height, 25, 25, 25, 250, bannerRadius)
             end
 
-            -- Calcul aspect ratio pour eviter l'etirement
+            -- Cadre: padding sur les 4 cotes comme Korium
+            local framePad = 8
+            local availW = width - (framePad * 2)
+            local availH = height - (framePad * 2)
+            local imgRounding = 6
+
+            -- Calcul aspect ratio
             local imgW = Menu.bannerWidth or width
             local imgH = Menu.bannerHeight or bannerHeight
             local aspectRatio = imgW / imgH
 
-            -- Fit dans la zone disponible (width x bannerHeight) en gardant le ratio
+            -- Fit dans la zone reduite en gardant le ratio
             local drawW, drawH
-            if (width / bannerHeight) > aspectRatio then
-                drawH = bannerHeight
-                drawW = bannerHeight * aspectRatio
+            if (availW / availH) > aspectRatio then
+                drawH = availH
+                drawW = availH * aspectRatio
             else
-                drawW = width
-                drawH = width / aspectRatio
+                drawW = availW
+                drawH = availW / aspectRatio
             end
 
-            -- Centrage horizontal et vertical dans la zone header complete
-            local drawX = x + (width - drawW) / 2
-            local drawY = y + (height - drawH) / 2
+            -- Centrage dans le cadre
+            local drawX = x + framePad + (availW - drawW) / 2
+            local drawY = y + framePad + (availH - drawH) / 2
 
-            Susano.DrawImage(Menu.bannerTexture, drawX, drawY, drawW, drawH, 1, 1, 1, 1, 0)
+            -- Image avec coins arrondis (dernier param = rounding)
+            Susano.DrawImage(Menu.bannerTexture, drawX, drawY, drawW, drawH, 1, 1, 1, 1, imgRounding)
         else
             Menu.DrawRect(x, y, width, height, Menu.Colors.HeaderPink.r, Menu.Colors.HeaderPink.g, Menu.Colors.HeaderPink.b, 255)
 
@@ -563,7 +570,7 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local baseG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
         local baseB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
 
-        -- Barre de selection Korium avec degrade horizontal
+        -- Barre de selection Korium: degrade horizontal 3 couches
         local floatPad = 6
         local selX = x + floatPad
         local selW = width - (floatPad * 2)
@@ -572,32 +579,16 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local selRadius = 4
 
         if Susano and Susano.DrawRectFilled then
-            -- Bordure blanche outline
-            Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.45, selRadius)
-            -- Degrade horizontal: 8 bandes de gauche (opaque) a droite (transparent)
-            local gradSteps = 8
-            local innerX = selX + 1
-            local innerW = selW - 2
-            local innerY = selY + 1
-            local innerH = selH - 2
-            local stepW = innerW / gradSteps
-            for gs = 0, gradSteps - 1 do
-                local t = gs / (gradSteps - 1)
-                local alphaStart = 0.55
-                local alphaEnd = 0.12
-                local stepAlpha = alphaStart + (alphaEnd - alphaStart) * t
-                local sx = innerX + gs * stepW
-                local sw = stepW + 1
-                if gs == 0 then
-                    Susano.DrawRectFilled(sx, innerY, sw, innerH, baseR, baseG, baseB, stepAlpha, selRadius)
-                elseif gs == gradSteps - 1 then
-                    Susano.DrawRectFilled(sx, innerY, innerX + innerW - sx, innerH, baseR * 0.6, baseG * 0.6, baseB * 0.6, stepAlpha, selRadius)
-                else
-                    Susano.DrawRectFilled(sx, innerY, sw, innerH, baseR, baseG, baseB, stepAlpha, 0)
-                end
-            end
+            -- Bordure blanche subtile
+            Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.35, selRadius)
+            -- Couche 1: base pleine largeur, alpha faible
+            Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.18, selRadius)
+            -- Couche 2: moitie gauche, alpha moyen
+            Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.55, selH - 2, baseR, baseG, baseB, 0.22, selRadius)
+            -- Couche 3: tiers gauche, alpha fort = point le plus opaque
+            Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.25, selH - 2, baseR, baseG, baseB, 0.25, selRadius)
         else
-            Menu.DrawRoundedRect(selX, selY, selW, selH, 255, 255, 255, 115, selRadius)
+            Menu.DrawRoundedRect(selX, selY, selW, selH, 255, 255, 255, 90, selRadius)
             Menu.DrawRoundedRect(selX + 1, selY + 1, selW - 2, selH - 2,
                 math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 100, selRadius)
         end
@@ -1018,7 +1009,7 @@ function Menu.DrawCategories()
                 local baseG = Menu.Colors.SelectedBg.g / 255.0
                 local baseB = Menu.Colors.SelectedBg.b / 255.0
 
-                -- Barre de selection Korium avec degrade horizontal
+                -- Barre de selection Korium: degrade horizontal 3 couches
                 local floatPad = 6
                 local selX = x + floatPad
                 local selW = width - (floatPad * 2)
@@ -1027,32 +1018,16 @@ function Menu.DrawCategories()
                 local selRadius = 4
 
                 if Susano and Susano.DrawRectFilled then
-                    -- Bordure blanche outline
-                    Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.45, selRadius)
-                    -- Degrade horizontal: 8 bandes de gauche (opaque) a droite (transparent)
-                    local gradSteps = 8
-                    local innerX = selX + 1
-                    local innerW = selW - 2
-                    local innerY = selY + 1
-                    local innerH = selH - 2
-                    local stepW = innerW / gradSteps
-                    for gs = 0, gradSteps - 1 do
-                        local t = gs / (gradSteps - 1)
-                        local alphaStart = 0.55
-                        local alphaEnd = 0.12
-                        local stepAlpha = alphaStart + (alphaEnd - alphaStart) * t
-                        local sx = innerX + gs * stepW
-                        local sw = stepW + 1
-                        if gs == 0 then
-                            Susano.DrawRectFilled(sx, innerY, sw, innerH, baseR, baseG, baseB, stepAlpha, selRadius)
-                        elseif gs == gradSteps - 1 then
-                            Susano.DrawRectFilled(sx, innerY, innerX + innerW - sx, innerH, baseR * 0.6, baseG * 0.6, baseB * 0.6, stepAlpha, selRadius)
-                        else
-                            Susano.DrawRectFilled(sx, innerY, sw, innerH, baseR, baseG, baseB, stepAlpha, 0)
-                        end
-                    end
+                    -- Bordure blanche subtile
+                    Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.35, selRadius)
+                    -- Couche 1: base pleine largeur, alpha faible
+                    Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.18, selRadius)
+                    -- Couche 2: moitie gauche, alpha moyen
+                    Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.55, selH - 2, baseR, baseG, baseB, 0.22, selRadius)
+                    -- Couche 3: tiers gauche, alpha fort
+                    Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.25, selH - 2, baseR, baseG, baseB, 0.25, selRadius)
                 else
-                    Menu.DrawRoundedRect(selX, selY, selW, selH, 255, 255, 255, 115, selRadius)
+                    Menu.DrawRoundedRect(selX, selY, selW, selH, 255, 255, 255, 90, selRadius)
                     Menu.DrawRoundedRect(selX + 1, selY + 1, selW - 2, selH - 2,
                         math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 100, selRadius)
                 end
@@ -1599,10 +1574,10 @@ function Menu.DrawBackground()
     local spacing = scaledPos.mainMenuSpacing
     local itemH = scaledPos.itemHeight
 
-    -- GRIS VISIBLE rgb(45,45,45) @ 98% opacite
-    local bgR = 0.176
-    local bgG = 0.176
-    local bgB = 0.176
+    -- Gris fonce rgb(25,25,25) @ 98% opacite
+    local bgR = 0.098
+    local bgG = 0.098
+    local bgB = 0.098
     local bgAlpha = 0.98
 
     if Menu.OpenedCategory then
@@ -1628,7 +1603,7 @@ function Menu.DrawBackground()
             if Susano and Susano.DrawRectFilled then
                 Susano.DrawRectFilled(x, itemsY, width, itemsH, bgR, bgG, bgB, bgAlpha, 0)
             else
-                Menu.DrawRect(x, itemsY, width, itemsH, 45, 45, 45, math.floor(bgAlpha * 255))
+                Menu.DrawRect(x, itemsY, width, itemsH, 25, 25, 25, math.floor(bgAlpha * 255))
             end
         end
     else
@@ -1640,7 +1615,7 @@ function Menu.DrawBackground()
             if Susano and Susano.DrawRectFilled then
                 Susano.DrawRectFilled(x, itemsY, width, itemsH, bgR, bgG, bgB, bgAlpha, 0)
             else
-                Menu.DrawRect(x, itemsY, width, itemsH, 45, 45, 45, math.floor(bgAlpha * 255))
+                Menu.DrawRect(x, itemsY, width, itemsH, 25, 25, 25, math.floor(bgAlpha * 255))
             end
         end
     end
