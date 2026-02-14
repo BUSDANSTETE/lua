@@ -82,28 +82,7 @@ LibraryCode = string.gsub(
 
 -- ============================================
 -- PATCH: Footer text + centered logo image
--- ============================================
--- Replace the hardcoded footer text with configurable Menu.FooterText
--- and add centered logo drawing
-LibraryCode = string.gsub(
-    LibraryCode,
-    'local footerText = ""',
-    'local footerText = Menu.FooterText or ""'
-)
-
--- Inject logo drawing right after footer left-text rendering
--- Match the unique line that draws the footer left text, then append logo code
-LibraryCode = string.gsub(
-    LibraryCode,
-    '(Menu%.DrawText%(currentX, footerTextY, footerText, footerSize, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%))',
-    [[%1
-    if Menu.FooterLogoTex and Menu.FooterLogoTex > 0 and Susano and Susano.DrawImage then
-        local _lSz = footerHeight * 0.7
-        local _lX = x + (footerWidth / 2) - (_lSz / 2)
-        local _lY = footerY + (footerHeight - _lSz) / 2
-        Susano.DrawImage(Menu.FooterLogoTex, _lX, _lY, _lSz, _lSz, 1, 1, 1, 1, 0)
-    end]]
-)
+-- Footer text + logo are now embedded directly in library.lua
 
 local chunk, err = load(LibraryCode)
 if not chunk then
@@ -138,7 +117,7 @@ Menu.FooterLogoTex = nil
 Menu.FooterText = "" -- <<< CHANGE THIS to your menu name
 
 -- Footer logo URL (small square image, ideally 64x64 or 128x128 PNG)
-Menu.FooterLogoUrl = "https://i.imgur.com/FQsvrIJ.png" -- <<< REPLACE with your logo URL
+Menu.FooterLogoUrl = "https://i.imgur.com/8z3fWq2.png" -- <<< REPLACE with your logo URL
 
 -- Load a single icon texture from URL, store in Menu.IconTextures[name]
 function Menu.LoadIconTexture(name, url)
@@ -1026,9 +1005,7 @@ Menu.Categories = {
             { name = "", isSeparator = true, separatorText = "Design" },
             { name = "Menu Theme", type = "selector", options = {"Blue", "Purple", "Pink", "Red", "Green"}, selected = 5 },
             { name = "Flocon", type = "toggle", value = true },
-            { name = "Gradient", type = "selector", options = {"1", "2"}, selected = 1 },
-            { name = "Scroll Bar Position", type = "selector", options = {"Left", "Right"}, selected = 1 },
-            { name = "Black Background", type = "toggle", value = false }
+            { name = "Scroll Bar Position", type = "selector", options = {"Left", "Right"}, selected = 1 }
         }},
         { name = "Keybinds", items = {
             { name = "Change Menu Keybind", type = "action" },
