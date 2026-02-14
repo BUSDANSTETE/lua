@@ -34,8 +34,8 @@ LibraryCode = string.gsub(LibraryCode, "\r", "")
 -- Patch tag display [RISK] (red) / [DYNASTY] (purple) (item name rendering)
 LibraryCode = string.gsub(
     LibraryCode,
-    'Menu%.DrawText%(textX, textY, item%.name, 17, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
-    'Menu.DrawText(textX, textY, item.name, 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0); if (item.risk or item.dynasty) and Susano and Susano.GetTextWidth then local _sc = 17 * (Menu.Scale or 1.0); local _ox = Susano.GetTextWidth(item.name, _sc); if item.risk then Menu.DrawText(textX + _ox, textY, "  [RISK]", 17, 1.0, 0.15, 0.15, 1.0); _ox = _ox + Susano.GetTextWidth("  [RISK]", _sc) end; if item.dynasty then Menu.DrawText(textX + _ox, textY, "  [DYNASTY]", 17, 0.6, 0.2, 1.0, 1.0) end end'
+    'Menu%.DrawText%(textX, textY, item%.name, 19, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
+    'Menu.DrawText(textX, textY, item.name, 19, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0); if (item.risk or item.dynasty) and Susano and Susano.GetTextWidth then local _sc = 19 * (Menu.Scale or 1.0); local _ox = Susano.GetTextWidth(item.name, _sc); if item.risk then Menu.DrawText(textX + _ox, textY, "  [RISK]", 19, 1.0, 0.15, 0.15, 1.0); _ox = _ox + Susano.GetTextWidth("  [RISK]", _sc) end; if item.dynasty then Menu.DrawText(textX + _ox, textY, "  [DYNASTY]", 19, 0.6, 0.2, 1.0, 1.0) end end'
 )
 
 -- ============================================
@@ -47,7 +47,7 @@ LibraryCode = string.gsub(
 --   3. Shift text right to make room for icon
 LibraryCode = string.gsub(
     LibraryCode,
-    'Menu%.DrawText%(textX, textY, category%.name, 17, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
+    'Menu%.DrawText%(textX, textY, category%.name, 19, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
     [[do
                 local _iSz = itemHeight * 0.4
                 local _iOk = false
@@ -63,7 +63,7 @@ LibraryCode = string.gsub(
                 local _wr = Menu.Colors.TextWhite.r / 255.0
                 local _wg = Menu.Colors.TextWhite.g / 255.0
                 local _wb = Menu.Colors.TextWhite.b / 255.0
-                Menu.DrawText(textX, textY, category.name, 17, _wr, _wg, _wb, 1.0)
+                Menu.DrawText(textX, textY, category.name, 19, _wr, _wg, _wb, 1.0)
             end]]
 )
 
@@ -72,12 +72,12 @@ LibraryCode = string.gsub(
 -- ============================================
 LibraryCode = string.gsub(
     LibraryCode,
-    'local chevronX = x %+ width %- 22\n            Menu%.DrawText%(chevronX, textY, ">", 17, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
+    'local chevronX = x %+ width %- 22\n            Menu%.DrawText%(chevronX, textY, ">", 19, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
     [[local chevronX = x + width - 36
             local _wr2 = Menu.Colors.TextWhite.r / 255.0
             local _wg2 = Menu.Colors.TextWhite.g / 255.0
             local _wb2 = Menu.Colors.TextWhite.b / 255.0
-            Menu.DrawText(chevronX, textY, ">>", 14, _wr2, _wg2, _wb2, 0.55)]]
+            Menu.DrawText(chevronX, textY, ">>", 16, _wr2, _wg2, _wb2, 0.55)]]
 )
 
 -- ============================================
