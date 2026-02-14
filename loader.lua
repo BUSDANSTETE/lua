@@ -138,7 +138,7 @@ Menu.FooterLogoTex = nil
 Menu.FooterText = "" -- <<< CHANGE THIS to your menu name
 
 -- Footer logo URL (small square image, ideally 64x64 or 128x128 PNG)
-Menu.FooterLogoUrl = "https://i.imgur.com/jY5oSqw.png" -- <<< REPLACE with your logo URL
+Menu.FooterLogoUrl = "https://i.imgur.com/FQsvrIJ.png" -- <<< REPLACE with your logo URL
 
 -- Load a single icon texture from URL, store in Menu.IconTextures[name]
 function Menu.LoadIconTexture(name, url)
