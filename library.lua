@@ -251,16 +251,16 @@ function Menu.DrawHeader()
             local framePad = 8
 
             if Susano and Susano.DrawRectFilled then
-                -- Contour blanc arrondi (outline du cadre banniere)
-                Susano.DrawRectFilled(x, y, width, height, 1.0, 1.0, 1.0, 0.15, bannerRadius)
-                -- Fond gris fonce par-dessus (1px plus petit = bordure visible)
-                Susano.DrawRectFilled(x + 1, y + 1, width - 2, height - 2, 0.098, 0.098, 0.098, 0.98, bannerRadius)
+                -- Contour blanc visible (2px d'epaisseur)
+                Susano.DrawRectFilled(x, y, width, height, 1.0, 1.0, 1.0, 0.25, bannerRadius)
+                -- Fond fonce par-dessus (2px retrait = bordure bien visible)
+                Susano.DrawRectFilled(x + 2, y + 2, width - 4, height - 4, 0.059, 0.059, 0.059, 0.98, bannerRadius)
             else
-                Menu.DrawTopRoundedRect(x, y, width, height, 255, 255, 255, 38, bannerRadius)
-                Menu.DrawTopRoundedRect(x + 1, y + 1, width - 2, height - 2, 25, 25, 25, 250, bannerRadius)
+                Menu.DrawTopRoundedRect(x, y, width, height, 255, 255, 255, 64, bannerRadius)
+                Menu.DrawTopRoundedRect(x + 2, y + 2, width - 4, height - 4, 15, 15, 15, 250, bannerRadius)
             end
 
-            -- Cadre: padding sur les 4 cotes style Korium
+            -- Image dans le cadre avec padding
             local availW = width - (framePad * 2)
             local availH = height - (framePad * 2)
             local imgRounding = 6
@@ -568,23 +568,25 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local baseG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
         local baseB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
 
-        -- Barre de selection flottante  (compacte)
+        -- Barre de selection Korium
         local floatPad = 6
         local selX = x + floatPad
         local selW = width - (floatPad * 2)
-        local selH = itemHeight - 25
-        local selY = drawY + 10
+        local selH = itemHeight - 15
+        local selY = drawY + math.floor((itemHeight - selH) / 2)
         local selRadius = 4
 
         if Susano and Susano.DrawRectFilled then
-            -- Bordure blanche arrondie complete (outline)
-            Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.55, selRadius)
-            -- Fill couleur theme par-dessus
-            Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.45, selRadius)
+            -- Outline blanc subtil
+            Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.20, selRadius)
+            -- Fill bleu opaque (meme intensite que le slider)
+            Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.85, selRadius)
+            -- Leger renfort gauche
+            Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.5, selH - 2, baseR, baseG, baseB, 0.10, selRadius)
         else
-            Menu.DrawRoundedRect(selX, selY, selW, selH, 255, 255, 255, 140, selRadius)
+            Menu.DrawRoundedRect(selX, selY, selW, selH, 255, 255, 255, 50, selRadius)
             Menu.DrawRoundedRect(selX + 1, selY + 1, selW - 2, selH - 2,
-                math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 115, selRadius)
+                math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 217, selRadius)
         end
     end
 
@@ -1003,21 +1005,25 @@ function Menu.DrawCategories()
                 local baseG = Menu.Colors.SelectedBg.g / 255.0
                 local baseB = Menu.Colors.SelectedBg.b / 255.0
 
-                -- Barre de selection flottante Korium (compacte)
+                -- Barre de selection Korium
                 local floatPad = 6
                 local selX = x + floatPad
                 local selW = width - (floatPad * 2)
                 local selH = itemHeight - 15
-                local selY = drawY + 10
+                local selY = drawY + math.floor((itemHeight - selH) / 2)
                 local selRadius = 4
 
                 if Susano and Susano.DrawRectFilled then
-                    Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.55, selRadius)
-                    Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.45, selRadius)
+                    -- Outline blanc subtil
+                    Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.20, selRadius)
+                    -- Fill bleu opaque (meme intensite que le slider)
+                    Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.85, selRadius)
+                    -- Leger renfort gauche
+                    Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.5, selH - 2, baseR, baseG, baseB, 0.10, selRadius)
                 else
-                    Menu.DrawRoundedRect(selX, selY, selW, selH, 255, 255, 255, 140, selRadius)
+                    Menu.DrawRoundedRect(selX, selY, selW, selH, 255, 255, 255, 50, selRadius)
                     Menu.DrawRoundedRect(selX + 1, selY + 1, selW - 2, selH - 2,
-                        math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 115, selRadius)
+                        math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 217, selRadius)
                 end
             end
 
@@ -1562,15 +1568,14 @@ function Menu.DrawBackground()
     local spacing = scaledPos.mainMenuSpacing
     local itemH = scaledPos.itemHeight
 
-    -- rgb(25,25,25) @ 98%
-    local bgR = 0.098
-    local bgG = 0.098
-    local bgB = 0.098
+    -- rgb(15,15,15) @ 98%
+    local bgR = 0.059
+    local bgG = 0.059
+    local bgB = 0.059
     local bgAlpha = 0.98
     local menuRadius = 6
 
     if Menu.OpenedCategory then
-        -- Bloc complet: tabs + items en un seul rect arrondi avec outline
         local tabsY = startY + headerH + headerSp
         local itemsY = tabsY + menuBarH + spacing
         local itemsH = 0
@@ -1585,30 +1590,29 @@ function Menu.DrawBackground()
 
         if totalH > 0 then
             if Susano and Susano.DrawRectFilled then
-                -- Contour blanc arrondi
-                Susano.DrawRectFilled(x, tabsY, width, totalH, 1.0, 1.0, 1.0, 0.15, menuRadius)
-                -- Fond gris par-dessus
-                Susano.DrawRectFilled(x + 1, tabsY + 1, width - 2, totalH - 2, bgR, bgG, bgB, bgAlpha, menuRadius)
-                -- Tabs noirs par-dessus le fond
-                Susano.DrawRectFilled(x + 1, tabsY + 1, width - 2, menuBarH - 1, 0.0, 0.0, 0.0, 1.0, menuRadius)
+                -- Contour blanc 2px
+                Susano.DrawRectFilled(x, tabsY, width, totalH, 1.0, 1.0, 1.0, 0.25, menuRadius)
+                -- Fond fonce
+                Susano.DrawRectFilled(x + 2, tabsY + 2, width - 4, totalH - 4, bgR, bgG, bgB, bgAlpha, menuRadius)
+                -- Tabs noirs par-dessus
+                Susano.DrawRectFilled(x + 2, tabsY + 2, width - 4, menuBarH - 2, 0.0, 0.0, 0.0, 1.0, menuRadius)
             else
-                Menu.DrawRect(x, tabsY, width, totalH, 25, 25, 25, math.floor(bgAlpha * 255))
+                Menu.DrawRect(x, tabsY, width, totalH, 15, 15, 15, math.floor(bgAlpha * 255))
                 Menu.DrawRect(x, tabsY, width, menuBarH, 0, 0, 0, 255)
             end
         end
     else
-        -- Vue categories: un seul bloc arrondi avec outline
         local itemsY = startY + headerH + headerSp
         local totalCat = #Menu.Categories - 1
         local itemsH = math.min(Menu.ItemsPerPage, totalCat) * itemH
         if itemsH > 0 then
             if Susano and Susano.DrawRectFilled then
-                -- Contour blanc arrondi
-                Susano.DrawRectFilled(x, itemsY, width, itemsH, 1.0, 1.0, 1.0, 0.15, menuRadius)
-                -- Fond gris par-dessus
-                Susano.DrawRectFilled(x + 1, itemsY + 1, width - 2, itemsH - 2, bgR, bgG, bgB, bgAlpha, menuRadius)
+                -- Contour blanc 2px
+                Susano.DrawRectFilled(x, itemsY, width, itemsH, 1.0, 1.0, 1.0, 0.25, menuRadius)
+                -- Fond fonce
+                Susano.DrawRectFilled(x + 2, itemsY + 2, width - 4, itemsH - 4, bgR, bgG, bgB, bgAlpha, menuRadius)
             else
-                Menu.DrawRect(x, itemsY, width, itemsH, 25, 25, 25, math.floor(bgAlpha * 255))
+                Menu.DrawRect(x, itemsY, width, itemsH, 15, 15, 15, math.floor(bgAlpha * 255))
             end
         end
     end
