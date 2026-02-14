@@ -164,7 +164,7 @@ Menu.Position = {
     itemHeight = 42,
     mainMenuHeight = 26,
     headerHeight = 100,
-    footerHeight = 35,
+    footerHeight = 42,
     footerSpacing = 7,
     headerSpacing = 7,
     mainMenuSpacing = 5,
@@ -591,7 +591,7 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
 
     local textX = x + 16
     local textY = itemY + itemHeight / 2 - 8
-    Menu.DrawText(textX, textY, item.name, 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
+    Menu.DrawText(textX, textY, item.name, 19, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
 
     if item.type == "toggle" then
         local toggleWidth = 36
@@ -1028,10 +1028,10 @@ function Menu.DrawCategories()
 
             local textX = x + 16
             local textY = itemY + itemHeight / 2 - 8
-            Menu.DrawText(textX, textY, category.name, 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
+            Menu.DrawText(textX, textY, category.name, 19, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
 
             local chevronX = x + width - 22
-            Menu.DrawText(chevronX, textY, ">", 17, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
+            Menu.DrawText(chevronX, textY, ">", 19, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
         end
     end
 
@@ -1225,7 +1225,7 @@ function Menu.DrawFooter()
     end
 
     local footerPadding = 15 * scale
-    local footerSize = 13
+    local footerSize = 15
     local scaledFooterSize = footerSize * scale
     local footerTextY = footerY + math.floor((footerHeight - scaledFooterSize) / 2)
 
