@@ -72,12 +72,12 @@ end
 Menu.Banner = {
     enabled = true,
     imageUrl = "https://i.imgur.com/xv46Mbz.png",
-    height = 95
+    height = 100
 }
 
 Menu.bannerTexture = nil
-Menu.bannerWidth = 0
-Menu.bannerHeight = 0
+Menu.bannerWidth = 90
+Menu.bannerHeight = 90
 
 function Menu.LoadBannerTexture(url)
     if not url or url == "" then return end
@@ -161,7 +161,7 @@ Menu.Position = {
     mainMenuHeight = 26,
     headerHeight = 100,
     footerHeight = 35,
-    footerSpacing = 5,
+    footerSpacing = 7,
     mainMenuSpacing = 5,
     footerRadius = 4,
     itemRadius = 4,
