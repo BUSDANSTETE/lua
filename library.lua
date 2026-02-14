@@ -317,12 +317,10 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
     local arrowH = math.floor(14 * scale)
     local arrowRadius = 3
 
-    -- Zone fleche haut
+    -- Zones: fleche haut / track / fleche bas
     local arrowUpY = startY
-    -- Zone track (entre les fleches)
     local trackY = arrowUpY + arrowH + 2
     local trackH = visibleHeight - (arrowH * 2) - 4
-    -- Zone fleche bas
     local arrowDownY = trackY + trackH + 2
 
     local bgR = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.r) and (Menu.Colors.SelectedBg.r / 255.0) or 1.0
@@ -330,11 +328,11 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
     local bgB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
 
     if Susano and Susano.DrawRectFilled then
-        -- Fleche haut: fond gris fonce
+        -- Fleche haut
         Susano.DrawRectFilled(scrollbarX, arrowUpY, scrollbarWidth, arrowH, 0.12, 0.12, 0.12, 0.95, arrowRadius)
-        -- Track fond noir
+        -- Track
         Susano.DrawRectFilled(scrollbarX, trackY, scrollbarWidth, trackH, 0.04, 0.04, 0.04, 0.95, scrollbarWidth / 2)
-        -- Fleche bas: fond gris fonce
+        -- Fleche bas
         Susano.DrawRectFilled(scrollbarX, arrowDownY, scrollbarWidth, arrowH, 0.12, 0.12, 0.12, 0.95, arrowRadius)
     else
         Menu.DrawRoundedRect(scrollbarX, arrowUpY, scrollbarWidth, arrowH, 30, 30, 30, 242, arrowRadius)
@@ -342,13 +340,26 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
         Menu.DrawRoundedRect(scrollbarX, arrowDownY, scrollbarWidth, arrowH, 30, 30, 30, 242, arrowRadius)
     end
 
-    -- Dessiner les chevrons ^ et v dans les fleches
-    local arrowFontSize = math.floor(8 * scale)
-    local arrowCenterX = scrollbarX + math.floor(scrollbarWidth / 2) - math.floor(3 * scale)
-    -- Chevron haut
-    Menu.DrawText(arrowCenterX, arrowUpY + math.floor(arrowH / 2) - math.floor(5 * scale), "^", arrowFontSize, 0.7, 0.7, 0.7, 0.9)
-    -- Chevron bas
-    Menu.DrawText(arrowCenterX, arrowDownY + math.floor(arrowH / 2) - math.floor(5 * scale), "v", arrowFontSize, 0.7, 0.7, 0.7, 0.9)
+    -- Icones fleches (images chargees depuis Imgur)
+    if Susano and Susano.DrawImage then
+        local iconPad = math.floor(2 * scale)
+        local iconSz = scrollbarWidth - (iconPad * 2)
+        local iconX = scrollbarX + iconPad
+
+        -- Fleche haut
+        local arrowUpTex = Menu.IconTextures and Menu.IconTextures["_arrowUp"]
+        if arrowUpTex and arrowUpTex > 0 then
+            local iconY = arrowUpY + math.floor((arrowH - iconSz) / 2)
+            Susano.DrawImage(arrowUpTex, iconX, iconY, iconSz, iconSz, 1, 1, 1, 0.8, 0)
+        end
+
+        -- Fleche bas
+        local arrowDownTex = Menu.IconTextures and Menu.IconTextures["_arrowDown"]
+        if arrowDownTex and arrowDownTex > 0 then
+            local iconY = arrowDownY + math.floor((arrowH - iconSz) / 2)
+            Susano.DrawImage(arrowDownTex, iconX, iconY, iconSz, iconSz, 1, 1, 1, 0.8, 0)
+        end
+    end
 
     -- Thumb dans la track
     local adjustedIndex = selectedIndex
@@ -375,12 +386,12 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
 
     local thumbPad = 1
     if Susano and Susano.DrawRectFilled then
-        -- Glow subtil
+        -- Glow
         Susano.DrawRectFilled(scrollbarX + thumbPad - 1, Menu.scrollbarY - 1,
             scrollbarWidth - (thumbPad * 2) + 2, Menu.scrollbarHeight + 2,
             bgR * 0.4, bgG * 0.4, bgB * 0.4, 0.35,
             (scrollbarWidth - (thumbPad * 2) + 2) / 2)
-        -- Thumb principal
+        -- Thumb
         Susano.DrawRectFilled(scrollbarX + thumbPad, Menu.scrollbarY,
             scrollbarWidth - (thumbPad * 2), Menu.scrollbarHeight,
             bgR, bgG, bgB, 1.0,
@@ -1504,7 +1515,7 @@ function Menu.DrawKeybindsInterface(alpha)
 end
 
 Menu.Particles = {}
-for i = 1, 40 do
+for i = 1, 15 do
     table.insert(Menu.Particles, {
         x = math.random(0, 100) / 100,
         y = math.random(0, 100) / 100,
@@ -1578,16 +1589,13 @@ function Menu.DrawBackground()
     local x = scaledPos.x
     local y = scaledPos.y
     local width = scaledPos.width - 1
-
     local segments, fullHeight = Menu.GetLayoutSegments()
-
     local startY = scaledPos.y
     local headerH = scaledPos.headerHeight
     local headerSp = scaledPos.headerSpacing or 0
     local menuBarH = scaledPos.mainMenuHeight
     local spacing = scaledPos.mainMenuSpacing
     local itemH = scaledPos.itemHeight
-
     local bgR = 0.059
     local bgG = 0.059
     local bgB = 0.059
@@ -1599,7 +1607,6 @@ function Menu.DrawBackground()
 
     if Menu.OpenedCategory then
         local tabsY = startY + headerH + headerSp
-        local itemsY = tabsY + menuBarH + spacing
         local itemsH = 0
         local category = Menu.Categories[Menu.OpenedCategory]
         if category and category.hasTabs and category.tabs then
@@ -1609,7 +1616,6 @@ function Menu.DrawBackground()
             end
         end
         local totalH = menuBarH + spacing + itemsH
-
         if totalH > 0 then
             if Susano and Susano.DrawRectFilled then
                 Susano.DrawRectFilled(x, tabsY, width, totalH, borderR, borderG, borderB, bgAlpha, menuRadius)
