@@ -301,6 +301,7 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
     end
 
     local scaledPos = Menu.GetScaledPosition()
+    local scale = Menu.Scale or 1.0
     local scrollbarWidth = scaledPos.scrollbarWidth
     local scrollbarPadding = scaledPos.scrollbarPadding
     local width = menuWidth or scaledPos.width
@@ -312,30 +313,54 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
         scrollbarX = x - scrollbarWidth - scrollbarPadding
     end
 
-    local scrollbarY = startY
-    local scrollbarHeight = visibleHeight
+    -- Dimensions fleches Korium
+    local arrowH = math.floor(14 * scale)
+    local arrowRadius = 3
 
-    -- Fond de la scrollbar complÃƒÂ¨tement noir
+    -- Zone fleche haut
+    local arrowUpY = startY
+    -- Zone track (entre les fleches)
+    local trackY = arrowUpY + arrowH + 2
+    local trackH = visibleHeight - (arrowH * 2) - 4
+    -- Zone fleche bas
+    local arrowDownY = trackY + trackH + 2
+
+    local bgR = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.r) and (Menu.Colors.SelectedBg.r / 255.0) or 1.0
+    local bgG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
+    local bgB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
+
     if Susano and Susano.DrawRectFilled then
-        Susano.DrawRectFilled(scrollbarX, scrollbarY, scrollbarWidth, scrollbarHeight,
-            0.0, 0.0, 0.0, 1.0,
-            scrollbarWidth / 2)
+        -- Fleche haut: fond gris fonce
+        Susano.DrawRectFilled(scrollbarX, arrowUpY, scrollbarWidth, arrowH, 0.12, 0.12, 0.12, 0.95, arrowRadius)
+        -- Track fond noir
+        Susano.DrawRectFilled(scrollbarX, trackY, scrollbarWidth, trackH, 0.04, 0.04, 0.04, 0.95, scrollbarWidth / 2)
+        -- Fleche bas: fond gris fonce
+        Susano.DrawRectFilled(scrollbarX, arrowDownY, scrollbarWidth, arrowH, 0.12, 0.12, 0.12, 0.95, arrowRadius)
     else
-        Menu.DrawRoundedRect(scrollbarX, scrollbarY, scrollbarWidth, scrollbarHeight,
-            0, 0, 0, 255, scrollbarWidth / 2)
+        Menu.DrawRoundedRect(scrollbarX, arrowUpY, scrollbarWidth, arrowH, 30, 30, 30, 242, arrowRadius)
+        Menu.DrawRoundedRect(scrollbarX, trackY, scrollbarWidth, trackH, 10, 10, 10, 242, scrollbarWidth / 2)
+        Menu.DrawRoundedRect(scrollbarX, arrowDownY, scrollbarWidth, arrowH, 30, 30, 30, 242, arrowRadius)
     end
 
+    -- Dessiner les chevrons ^ et v dans les fleches
+    local arrowFontSize = math.floor(8 * scale)
+    local arrowCenterX = scrollbarX + math.floor(scrollbarWidth / 2) - math.floor(3 * scale)
+    -- Chevron haut
+    Menu.DrawText(arrowCenterX, arrowUpY + math.floor(arrowH / 2) - math.floor(5 * scale), "^", arrowFontSize, 0.7, 0.7, 0.7, 0.9)
+    -- Chevron bas
+    Menu.DrawText(arrowCenterX, arrowDownY + math.floor(arrowH / 2) - math.floor(5 * scale), "v", arrowFontSize, 0.7, 0.7, 0.7, 0.9)
+
+    -- Thumb dans la track
     local adjustedIndex = selectedIndex
     if isMainMenu then
         adjustedIndex = selectedIndex - 1
     end
 
-    -- Calcul de la hauteur du thumb basÃƒÂ© sur le ratio d'ÃƒÂ©lÃƒÂ©ments visibles
-    local visibleRatio = math.min(1.0, visibleHeight / (totalItems * (Menu.Position.itemHeight * (Menu.Scale or 1.0))))
-    local thumbHeight = math.max(scrollbarHeight * 0.15, scrollbarHeight * visibleRatio)
-    local maxThumbY = scrollbarY + scrollbarHeight - thumbHeight
-    local thumbY = scrollbarY + ((adjustedIndex - 1) / math.max(1, totalItems - 1)) * (scrollbarHeight - thumbHeight)
-    thumbY = math.max(scrollbarY, math.min(maxThumbY, thumbY))
+    local visibleRatio = math.min(1.0, visibleHeight / (totalItems * (Menu.Position.itemHeight * scale)))
+    local thumbHeight = math.max(trackH * 0.15, trackH * visibleRatio)
+    local maxThumbY = trackY + trackH - thumbHeight
+    local thumbY = trackY + ((adjustedIndex - 1) / math.max(1, totalItems - 1)) * (trackH - thumbHeight)
+    thumbY = math.max(trackY, math.min(maxThumbY, thumbY))
 
     if not Menu.scrollbarY then
         Menu.scrollbarY = thumbY
@@ -348,34 +373,23 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
     Menu.scrollbarY = Menu.scrollbarY + (thumbY - Menu.scrollbarY) * smoothSpeed
     Menu.scrollbarHeight = Menu.scrollbarHeight + (thumbHeight - Menu.scrollbarHeight) * smoothSpeed
 
-    local thumbPadding = 2
-    local bgR = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.r) and (Menu.Colors.SelectedBg.r / 255.0) or 1.0
-    local bgG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
-    local bgB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
-    
-    -- Thumb avec effet de glow et meilleur contraste
+    local thumbPad = 1
     if Susano and Susano.DrawRectFilled then
-        -- Glow externe subtil
-        Susano.DrawRectFilled(scrollbarX + thumbPadding - 1, Menu.scrollbarY + thumbPadding - 1,
-            scrollbarWidth - (thumbPadding * 2) + 2, Menu.scrollbarHeight - (thumbPadding * 2) + 2,
-            bgR * 0.3, bgG * 0.3, bgB * 0.3, 0.4,
-            (scrollbarWidth - (thumbPadding * 2) + 2) / 2)
+        -- Glow subtil
+        Susano.DrawRectFilled(scrollbarX + thumbPad - 1, Menu.scrollbarY - 1,
+            scrollbarWidth - (thumbPad * 2) + 2, Menu.scrollbarHeight + 2,
+            bgR * 0.4, bgG * 0.4, bgB * 0.4, 0.35,
+            (scrollbarWidth - (thumbPad * 2) + 2) / 2)
         -- Thumb principal
-        Susano.DrawRectFilled(scrollbarX + thumbPadding, Menu.scrollbarY + thumbPadding,
-            scrollbarWidth - (thumbPadding * 2), Menu.scrollbarHeight - (thumbPadding * 2),
+        Susano.DrawRectFilled(scrollbarX + thumbPad, Menu.scrollbarY,
+            scrollbarWidth - (thumbPad * 2), Menu.scrollbarHeight,
             bgR, bgG, bgB, 1.0,
-            (scrollbarWidth - (thumbPadding * 2)) / 2)
+            (scrollbarWidth - (thumbPad * 2)) / 2)
     else
-        -- Glow externe
-        Menu.DrawRoundedRect(scrollbarX + thumbPadding - 1, Menu.scrollbarY + thumbPadding - 1,
-            scrollbarWidth - (thumbPadding * 2) + 2, Menu.scrollbarHeight - (thumbPadding * 2) + 2,
-            math.floor(bgR * 0.3 * 255), math.floor(bgG * 0.3 * 255), math.floor(bgB * 0.3 * 255), 102,
-            (scrollbarWidth - (thumbPadding * 2) + 2) / 2)
-        -- Thumb principal
-        Menu.DrawRoundedRect(scrollbarX + thumbPadding, Menu.scrollbarY + thumbPadding,
-            scrollbarWidth - (thumbPadding * 2), Menu.scrollbarHeight - (thumbPadding * 2),
-            bgR * 255, bgG * 255, bgB * 255, 255,
-            (scrollbarWidth - (thumbPadding * 2)) / 2)
+        Menu.DrawRoundedRect(scrollbarX + thumbPad, Menu.scrollbarY,
+            scrollbarWidth - (thumbPad * 2), Menu.scrollbarHeight,
+            math.floor(bgR * 255), math.floor(bgG * 255), math.floor(bgB * 255), 255,
+            (scrollbarWidth - (thumbPad * 2)) / 2)
     end
 end
 
@@ -1490,7 +1504,7 @@ function Menu.DrawKeybindsInterface(alpha)
 end
 
 Menu.Particles = {}
-for i = 1, 20 do
+for i = 1, 40 do
     table.insert(Menu.Particles, {
         x = math.random(0, 100) / 100,
         y = math.random(0, 100) / 100,
@@ -2631,5 +2645,3 @@ end
 
 
 return Menu
-
-
