@@ -687,7 +687,7 @@ Menu.Categories = {
             { name = "Shoes", type = "selector", options = {}, selected = 1 }
         }}
     }},
-    { name = "Online", iconUrl = "https://i.imgur.com/OnjwtU5.png", icon = "ðŸ‘¥", hasTabs = true, tabs = {
+    { name = "Online", iconUrl = "https://i.imgur.com/9k1REcK.png", icon = "ðŸ‘¥", hasTabs = true, tabs = {
         { name = "Player List", items = {
             { name = "Loading players...", type = "action" }
         }},
@@ -781,7 +781,7 @@ Menu.Categories = {
             { name = "Delete All Props", type = "action" }
         }}
     }},
-    { name = "Combat", iconUrl = "https://i.imgur.com/ZvLM68a.png", icon = "ðŸ”«", hasTabs = true, tabs = {
+    { name = "Combat", iconUrl = "https://i.imgur.com/zeRlEgV.png", icon = "ðŸ”«", hasTabs = true, tabs = {
         { name = "General", items = {
             { name = "Attach Target (H)", type = "toggle", value = false, onClick = function(val) ToggleAttachTarget(val) end },
             { name = "", isSeparator = true, separatorText = "Weapon Mods" },
@@ -997,7 +997,7 @@ Menu.Categories = {
             end }
         }}
     }},
-    { name = "Exploit", iconUrl = "https://i.imgur.com/FyDx9i0.png", icon = "💀", hasTabs = true, tabs = {
+    { name = "Exploit", iconUrl = "https://i.imgur.com/G4seAMg.png", icon = "💀", hasTabs = true, tabs = {
         { name = "Exploits", items = {
             { name = "", isSeparator = true, separatorText = "Server" },
             { name = "Staff Mode", type = "toggle", value = false, dynasty = true},
@@ -14141,5 +14141,4 @@ if Actions.clearAllAttachedItem then
         Menu.ClearAllAttachedProps()
     end
 end
-
 
