@@ -565,7 +565,7 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local baseG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
         local baseB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
 
-        -- Barre de selection flottante Korium (compacte)
+        -- Barre de selection flottante  (compacte)
         local floatPad = 6
         local selX = x + floatPad
         local selW = width - (floatPad * 2)
@@ -1222,7 +1222,7 @@ function Menu.DrawFooter()
     local scaledFooterSize = footerSize * scale
     local footerTextY = footerY + math.floor((footerHeight - scaledFooterSize) / 2)
 
-    local footerText = "Korium.cc"
+    local footerText = "BUSDANSTETE"
     local currentX = x + footerPadding
 
     local textWidth = 0
@@ -2617,3 +2617,4 @@ end
 
 
 return Menu
+
