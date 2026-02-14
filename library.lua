@@ -249,24 +249,29 @@ function Menu.DrawHeader()
                 Menu.DrawTopRoundedRect(x, y, width, height, 15, 15, 15, 240, bannerRadius)
             end
 
+            -- Padding interieur pour effet cadre (marge visible sur les 4 cotes)
+            local framePad = 8
+            local availW = width - (framePad * 2)
+            local availH = height - (framePad * 2)
+
             -- Calcul aspect ratio pour eviter l'etirement
             local imgW = Menu.bannerWidth or width
             local imgH = Menu.bannerHeight or bannerHeight
             local aspectRatio = imgW / imgH
 
-            -- Fit dans la zone disponible (width x bannerHeight) en gardant le ratio
+            -- Fit dans la zone reduite (availW x availH) en gardant le ratio
             local drawW, drawH
-            if (width / bannerHeight) > aspectRatio then
-                drawH = bannerHeight
-                drawW = bannerHeight * aspectRatio
+            if (availW / availH) > aspectRatio then
+                drawH = availH
+                drawW = availH * aspectRatio
             else
-                drawW = width
-                drawH = width / aspectRatio
+                drawW = availW
+                drawH = availW / aspectRatio
             end
 
-            -- Centrage horizontal et vertical dans la zone header complete
-            local drawX = x + (width - drawW) / 2
-            local drawY = y + (height - drawH) / 2
+            -- Centrage dans la zone cadre
+            local drawX = x + framePad + (availW - drawW) / 2
+            local drawY = y + framePad + (availH - drawH) / 2
 
             Susano.DrawImage(Menu.bannerTexture, drawX, drawY, drawW, drawH, 1, 1, 1, 1, 0)
         else
@@ -563,8 +568,8 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local floatPad = 6
         local selX = x + floatPad
         local selW = width - (floatPad * 2)
-        local selH = itemHeight - 4
-        local selY = drawY + 2
+        local selH = itemHeight - 12
+        local selY = drawY + 6
         local selRadius = 4
 
         if Susano and Susano.DrawRectFilled then
@@ -998,8 +1003,8 @@ function Menu.DrawCategories()
                 local floatPad = 6
                 local selX = x + floatPad
                 local selW = width - (floatPad * 2)
-                local selH = itemHeight - 4
-                local selY = drawY + 2
+                local selH = itemHeight - 12
+                local selY = drawY + 6
                 local selRadius = 4
 
                 if Susano and Susano.DrawRectFilled then
