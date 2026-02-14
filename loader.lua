@@ -119,6 +119,10 @@ Menu.FooterText = "" -- <<< CHANGE THIS to your menu name
 -- Footer logo URL (small square image, ideally 64x64 or 128x128 PNG)
 Menu.FooterLogoUrl = "https://i.imgur.com/jY5oSqw.png" -- <<< REPLACE with your logo URL
 
+-- Scrollbar arrow icons
+Menu.ArrowUpUrl = "https://i.imgur.com/CefzPfK.png"
+Menu.ArrowDownUrl = "https://i.imgur.com/cEtkALw.png"
+
 -- Load a single icon texture from URL, store in Menu.IconTextures[name]
 function Menu.LoadIconTexture(name, url)
     if not url or url == "" then return end
@@ -172,6 +176,13 @@ function Menu.LoadAllIcons()
         end
     end
     Menu.LoadFooterLogo(Menu.FooterLogoUrl)
+    -- Charger les fleches scrollbar
+    if Menu.ArrowUpUrl and Menu.ArrowUpUrl ~= "" then
+        Menu.LoadIconTexture("_arrowUp", Menu.ArrowUpUrl)
+    end
+    if Menu.ArrowDownUrl and Menu.ArrowDownUrl ~= "" then
+        Menu.LoadIconTexture("_arrowDown", Menu.ArrowDownUrl)
+    end
 end
 
 Menu.DrawWatermark = function() end
