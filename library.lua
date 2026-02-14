@@ -546,8 +546,6 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         return
     end
 
-    Menu.DrawRect(x, itemY, width, itemHeight, Menu.Colors.BackgroundDark.r, Menu.Colors.BackgroundDark.g, Menu.Colors.BackgroundDark.b, 50)
-
     if isSelected then
         if Menu.SelectorY == 0 then
             Menu.SelectorY = itemY
@@ -565,23 +563,43 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local baseG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
         local baseB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
 
-        -- Barre de selection flottante  (compacte)
+        -- Barre de selection Korium avec degrade horizontal
         local floatPad = 6
         local selX = x + floatPad
         local selW = width - (floatPad * 2)
-        local selH = itemHeight - 25
-        local selY = drawY + 10
+        local selH = itemHeight - 15
+        local selY = drawY + math.floor((itemHeight - selH) / 2)
         local selRadius = 4
 
         if Susano and Susano.DrawRectFilled then
-            -- Bordure blanche arrondie complete (outline)
-            Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.55, selRadius)
-            -- Fill couleur theme par-dessus
-            Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.45, selRadius)
+            -- Bordure blanche outline
+            Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.45, selRadius)
+            -- Degrade horizontal: 8 bandes de gauche (opaque) a droite (transparent)
+            local gradSteps = 8
+            local innerX = selX + 1
+            local innerW = selW - 2
+            local innerY = selY + 1
+            local innerH = selH - 2
+            local stepW = innerW / gradSteps
+            for gs = 0, gradSteps - 1 do
+                local t = gs / (gradSteps - 1)
+                local alphaStart = 0.55
+                local alphaEnd = 0.12
+                local stepAlpha = alphaStart + (alphaEnd - alphaStart) * t
+                local sx = innerX + gs * stepW
+                local sw = stepW + 1
+                if gs == 0 then
+                    Susano.DrawRectFilled(sx, innerY, sw, innerH, baseR, baseG, baseB, stepAlpha, selRadius)
+                elseif gs == gradSteps - 1 then
+                    Susano.DrawRectFilled(sx, innerY, innerX + innerW - sx, innerH, baseR * 0.6, baseG * 0.6, baseB * 0.6, stepAlpha, selRadius)
+                else
+                    Susano.DrawRectFilled(sx, innerY, sw, innerH, baseR, baseG, baseB, stepAlpha, 0)
+                end
+            end
         else
-            Menu.DrawRoundedRect(selX, selY, selW, selH, 255, 255, 255, 140, selRadius)
+            Menu.DrawRoundedRect(selX, selY, selW, selH, 255, 255, 255, 115, selRadius)
             Menu.DrawRoundedRect(selX + 1, selY + 1, selW - 2, selH - 2,
-                math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 115, selRadius)
+                math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 100, selRadius)
         end
     end
 
@@ -982,7 +1000,6 @@ function Menu.DrawCategories()
             local isSelected = (categoryIndex == Menu.CurrentCategory)
 
             local itemY = startY + (displayIndex - 1) * itemHeight
-            Menu.DrawRect(x, itemY, width, itemHeight, Menu.Colors.BackgroundDark.r, Menu.Colors.BackgroundDark.g, Menu.Colors.BackgroundDark.b, 50)
 
             if isSelected then
                 if Menu.CategorySelectorY == 0 then
@@ -1001,21 +1018,43 @@ function Menu.DrawCategories()
                 local baseG = Menu.Colors.SelectedBg.g / 255.0
                 local baseB = Menu.Colors.SelectedBg.b / 255.0
 
-                -- Barre de selection flottante Korium (compacte)
+                -- Barre de selection Korium avec degrade horizontal
                 local floatPad = 6
                 local selX = x + floatPad
                 local selW = width - (floatPad * 2)
                 local selH = itemHeight - 15
-                local selY = drawY + 10
+                local selY = drawY + math.floor((itemHeight - selH) / 2)
                 local selRadius = 4
 
                 if Susano and Susano.DrawRectFilled then
-                    Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.55, selRadius)
-                    Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.45, selRadius)
+                    -- Bordure blanche outline
+                    Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.45, selRadius)
+                    -- Degrade horizontal: 8 bandes de gauche (opaque) a droite (transparent)
+                    local gradSteps = 8
+                    local innerX = selX + 1
+                    local innerW = selW - 2
+                    local innerY = selY + 1
+                    local innerH = selH - 2
+                    local stepW = innerW / gradSteps
+                    for gs = 0, gradSteps - 1 do
+                        local t = gs / (gradSteps - 1)
+                        local alphaStart = 0.55
+                        local alphaEnd = 0.12
+                        local stepAlpha = alphaStart + (alphaEnd - alphaStart) * t
+                        local sx = innerX + gs * stepW
+                        local sw = stepW + 1
+                        if gs == 0 then
+                            Susano.DrawRectFilled(sx, innerY, sw, innerH, baseR, baseG, baseB, stepAlpha, selRadius)
+                        elseif gs == gradSteps - 1 then
+                            Susano.DrawRectFilled(sx, innerY, innerX + innerW - sx, innerH, baseR * 0.6, baseG * 0.6, baseB * 0.6, stepAlpha, selRadius)
+                        else
+                            Susano.DrawRectFilled(sx, innerY, sw, innerH, baseR, baseG, baseB, stepAlpha, 0)
+                        end
+                    end
                 else
-                    Menu.DrawRoundedRect(selX, selY, selW, selH, 255, 255, 255, 140, selRadius)
+                    Menu.DrawRoundedRect(selX, selY, selW, selH, 255, 255, 255, 115, selRadius)
                     Menu.DrawRoundedRect(selX + 1, selY + 1, selW - 2, selH - 2,
-                        math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 115, selRadius)
+                        math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 100, selRadius)
                 end
             end
 
@@ -2617,4 +2656,3 @@ end
 
 
 return Menu
-
