@@ -251,9 +251,7 @@ function Menu.DrawHeader()
             local framePad = 8
 
             if Susano and Susano.DrawRectFilled then
-                -- Contour gris clair arrondi
                 Susano.DrawRectFilled(x, y, width, height, 0.216, 0.216, 0.216, 0.98, bannerRadius)
-                -- Fond fonce par-dessus
                 Susano.DrawRectFilled(x + 1, y + 1, width - 2, height - 2, 0.059, 0.059, 0.059, 0.98, bannerRadius)
             else
                 Menu.DrawTopRoundedRect(x, y, width, height, 55, 55, 55, 250, bannerRadius)
@@ -567,7 +565,7 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local baseG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
         local baseB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
 
-        -- Barre de selection Korium
+        -- Barre de selection Korium avec glow
         local floatPad = 6
         local selX = x + floatPad
         local selW = width - (floatPad * 2)
@@ -576,11 +574,16 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local selRadius = 4
 
         if Susano and Susano.DrawRectFilled then
-            -- Outline gris clair (meme teinte que le contour du menu)
+            -- Glow externe: halo lumineux autour de la barre
+            local glowPad = 4
+            Susano.DrawRectFilled(selX - glowPad, selY - glowPad, selW + glowPad * 2, selH + glowPad * 2, baseR, baseG, baseB, 0.08, selRadius + 3)
+            local glowPad2 = 2
+            Susano.DrawRectFilled(selX - glowPad2, selY - glowPad2, selW + glowPad2 * 2, selH + glowPad2 * 2, baseR, baseG, baseB, 0.12, selRadius + 1)
+            -- Outline gris clair
             Susano.DrawRectFilled(selX, selY, selW, selH, 0.216, 0.216, 0.216, 0.98, selRadius)
-            -- Fill bleu opaque
+            -- Fill bleu
             Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.85, selRadius)
-            -- Leger renfort gauche
+            -- Renfort gauche
             Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.5, selH - 2, baseR, baseG, baseB, 0.10, selRadius)
         else
             Menu.DrawRoundedRect(selX, selY, selW, selH, 55, 55, 55, 250, selRadius)
@@ -1004,7 +1007,7 @@ function Menu.DrawCategories()
                 local baseG = Menu.Colors.SelectedBg.g / 255.0
                 local baseB = Menu.Colors.SelectedBg.b / 255.0
 
-                -- Barre de selection Korium
+                -- Barre de selection Korium avec glow
                 local floatPad = 6
                 local selX = x + floatPad
                 local selW = width - (floatPad * 2)
@@ -1013,11 +1016,16 @@ function Menu.DrawCategories()
                 local selRadius = 4
 
                 if Susano and Susano.DrawRectFilled then
+                    -- Glow externe
+                    local glowPad = 4
+                    Susano.DrawRectFilled(selX - glowPad, selY - glowPad, selW + glowPad * 2, selH + glowPad * 2, baseR, baseG, baseB, 0.08, selRadius + 3)
+                    local glowPad2 = 2
+                    Susano.DrawRectFilled(selX - glowPad2, selY - glowPad2, selW + glowPad2 * 2, selH + glowPad2 * 2, baseR, baseG, baseB, 0.12, selRadius + 1)
                     -- Outline gris clair
                     Susano.DrawRectFilled(selX, selY, selW, selH, 0.216, 0.216, 0.216, 0.98, selRadius)
-                    -- Fill bleu opaque
+                    -- Fill bleu
                     Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.85, selRadius)
-                    -- Leger renfort gauche
+                    -- Renfort gauche
                     Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.5, selH - 2, baseR, baseG, baseB, 0.10, selRadius)
                 else
                     Menu.DrawRoundedRect(selX, selY, selW, selH, 55, 55, 55, 250, selRadius)
@@ -1572,7 +1580,6 @@ function Menu.DrawBackground()
     local bgB = 0.059
     local bgAlpha = 0.98
     local menuRadius = 6
-    -- Gris clair contour: rgb(55,55,55)
     local borderR = 0.216
     local borderG = 0.216
     local borderB = 0.216
