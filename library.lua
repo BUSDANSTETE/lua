@@ -157,11 +157,12 @@ Menu.Position = {
     x = 50,
     y = 100,
     width = 360,
-    itemHeight = 34,
+    itemHeight = 42,
     mainMenuHeight = 26,
     headerHeight = 100,
     footerHeight = 35,
     footerSpacing = 7,
+    headerSpacing = 7,
     mainMenuSpacing = 5,
     footerRadius = 4,
     itemRadius = 4,
@@ -182,6 +183,7 @@ function Menu.GetScaledPosition()
         headerHeight = Menu.Position.headerHeight * scale,
         footerHeight = Menu.Position.footerHeight * scale,
         footerSpacing = Menu.Position.footerSpacing * scale,
+        headerSpacing = (Menu.Position.headerSpacing or 0) * scale,
         mainMenuSpacing = Menu.Position.mainMenuSpacing * scale,
         footerRadius = Menu.Position.footerRadius * scale,
         itemRadius = Menu.Position.itemRadius * scale,
@@ -241,37 +243,32 @@ function Menu.DrawHeader()
 
     if Menu.Banner.enabled then
         if Menu.bannerTexture and Menu.bannerTexture > 0 and Susano and Susano.DrawImage then
-            -- Fond gris fonce (meme couleur que le menu) avec coins arrondis
+            -- Fond noir avec coins arrondis couvrant TOUT le header (pas seulement bannerHeight)
             local bannerRadius = radius
             if Susano and Susano.DrawRectFilled then
-                Susano.DrawRectFilled(x, y, width, height, 0.059, 0.059, 0.059, 0.94, bannerRadius)
+                Susano.DrawRectFilled(x, y, width, height, 0.051, 0.055, 0.055, 0.98, bannerRadius)
             else
-                Menu.DrawTopRoundedRect(x, y, width, height, 15, 15, 15, 240, bannerRadius)
+                Menu.DrawTopRoundedRect(x, y, width, height, 13, 14, 14, 250, bannerRadius)
             end
-
-            -- Padding interieur pour effet cadre (marge visible sur les 4 cotes)
-            local framePad = 8
-            local availW = width - (framePad * 2)
-            local availH = height - (framePad * 2)
 
             -- Calcul aspect ratio pour eviter l'etirement
             local imgW = Menu.bannerWidth or width
             local imgH = Menu.bannerHeight or bannerHeight
             local aspectRatio = imgW / imgH
 
-            -- Fit dans la zone reduite (availW x availH) en gardant le ratio
+            -- Fit dans la zone disponible (width x bannerHeight) en gardant le ratio
             local drawW, drawH
-            if (availW / availH) > aspectRatio then
-                drawH = availH
-                drawW = availH * aspectRatio
+            if (width / bannerHeight) > aspectRatio then
+                drawH = bannerHeight
+                drawW = bannerHeight * aspectRatio
             else
-                drawW = availW
-                drawH = availW / aspectRatio
+                drawW = width
+                drawH = width / aspectRatio
             end
 
-            -- Centrage dans la zone cadre
-            local drawX = x + framePad + (availW - drawW) / 2
-            local drawY = y + framePad + (availH - drawH) / 2
+            -- Centrage horizontal et vertical dans la zone header complete
+            local drawX = x + (width - drawW) / 2
+            local drawY = y + (height - drawH) / 2
 
             Susano.DrawImage(Menu.bannerTexture, drawX, drawY, drawW, drawH, 1, 1, 1, 1, 0)
         else
@@ -565,23 +562,37 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local baseB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
 
         -- Barre de selection flottante style Korium
-        local floatPad = 6
+        local floatPad = 10
         local selX = x + floatPad
         local selW = width - (floatPad * 2)
-        local selH = itemHeight - 12
-        local selY = drawY + 6
+        local selH = itemHeight - 2
+        local selY = drawY + 1
         local selRadius = 4
 
+        -- Fond bleu Korium a 50% opacite
         if Susano and Susano.DrawRectFilled then
-            -- Bordure blanche: rect arrondi complet (pas de trous dans les coins)
-            Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.55, selRadius)
-            -- Fill interieur: rect arrondi 1px plus petit de chaque cote
-            Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.45, selRadius)
+            Susano.DrawRectFilled(selX, selY, selW, selH, baseR, baseG, baseB, 0.5, selRadius)
         else
             Menu.DrawRoundedRect(selX, selY, selW, selH,
-                255, 255, 255, 140, selRadius)
-            Menu.DrawRoundedRect(selX + 1, selY + 1, selW - 2, selH - 2,
-                math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 115, selRadius)
+                math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 128, selRadius)
+        end
+
+        -- Bordure blanche fine
+        local borderThickness = 1
+        if Susano and Susano.DrawRectFilled then
+            -- Top
+            Susano.DrawRectFilled(selX + selRadius, selY, selW - selRadius * 2, borderThickness, 1.0, 1.0, 1.0, 0.7, 0)
+            -- Bottom
+            Susano.DrawRectFilled(selX + selRadius, selY + selH - borderThickness, selW - selRadius * 2, borderThickness, 1.0, 1.0, 1.0, 0.7, 0)
+            -- Left
+            Susano.DrawRectFilled(selX, selY + selRadius, borderThickness, selH - selRadius * 2, 1.0, 1.0, 1.0, 0.7, 0)
+            -- Right
+            Susano.DrawRectFilled(selX + selW - borderThickness, selY + selRadius, borderThickness, selH - selRadius * 2, 1.0, 1.0, 1.0, 0.7, 0)
+        else
+            Menu.DrawRect(selX + selRadius, selY, selW - selRadius * 2, borderThickness, 255, 255, 255, 180)
+            Menu.DrawRect(selX + selRadius, selY + selH - borderThickness, selW - selRadius * 2, borderThickness, 255, 255, 255, 180)
+            Menu.DrawRect(selX, selY + selRadius, borderThickness, selH - selRadius * 2, 255, 255, 255, 180)
+            Menu.DrawRect(selX + selW - borderThickness, selY + selRadius, borderThickness, selH - selRadius * 2, 255, 255, 255, 180)
         end
     end
 
@@ -908,7 +919,8 @@ function Menu.DrawCategories()
 
         local scaledPos = Menu.GetScaledPosition()
         local x = scaledPos.x
-        local startY = scaledPos.y + scaledPos.headerHeight
+        local headerSp = scaledPos.headerSpacing or 0
+        local startY = scaledPos.y + scaledPos.headerHeight + headerSp
         local width = scaledPos.width
         local itemHeight = scaledPos.itemHeight
         local mainMenuHeight = scaledPos.mainMenuHeight
@@ -955,7 +967,8 @@ function Menu.DrawCategories()
 
     local scaledPos = Menu.GetScaledPosition()
     local x = scaledPos.x
-    local startY = scaledPos.y + scaledPos.headerHeight
+    local headerSp = scaledPos.headerSpacing or 0
+    local startY = scaledPos.y + scaledPos.headerHeight + headerSp
     local width = scaledPos.width
     local itemHeight = scaledPos.itemHeight
     local mainMenuHeight = scaledPos.mainMenuHeight
@@ -1000,23 +1013,33 @@ function Menu.DrawCategories()
                 local baseB = Menu.Colors.SelectedBg.b / 255.0
 
                 -- Barre de selection flottante style Korium
-                local floatPad = 6
+                local floatPad = 10
                 local selX = x + floatPad
                 local selW = width - (floatPad * 2)
-                local selH = itemHeight - 12
-                local selY = drawY + 6
+                local selH = itemHeight - 2
+                local selY = drawY + 1
                 local selRadius = 4
 
+                -- Fond bleu Korium a 50% opacite
                 if Susano and Susano.DrawRectFilled then
-                    -- Bordure blanche: rect arrondi complet
-                    Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.55, selRadius)
-                    -- Fill interieur: rect arrondi 1px plus petit
-                    Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.45, selRadius)
+                    Susano.DrawRectFilled(selX, selY, selW, selH, baseR, baseG, baseB, 0.5, selRadius)
                 else
                     Menu.DrawRoundedRect(selX, selY, selW, selH,
-                        255, 255, 255, 140, selRadius)
-                    Menu.DrawRoundedRect(selX + 1, selY + 1, selW - 2, selH - 2,
-                        math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 115, selRadius)
+                        math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 128, selRadius)
+                end
+
+                -- Bordure blanche fine
+                local borderThickness = 1
+                if Susano and Susano.DrawRectFilled then
+                    Susano.DrawRectFilled(selX + selRadius, selY, selW - selRadius * 2, borderThickness, 1.0, 1.0, 1.0, 0.7, 0)
+                    Susano.DrawRectFilled(selX + selRadius, selY + selH - borderThickness, selW - selRadius * 2, borderThickness, 1.0, 1.0, 1.0, 0.7, 0)
+                    Susano.DrawRectFilled(selX, selY + selRadius, borderThickness, selH - selRadius * 2, 1.0, 1.0, 1.0, 0.7, 0)
+                    Susano.DrawRectFilled(selX + selW - borderThickness, selY + selRadius, borderThickness, selH - selRadius * 2, 1.0, 1.0, 1.0, 0.7, 0)
+                else
+                    Menu.DrawRect(selX + selRadius, selY, selW - selRadius * 2, borderThickness, 255, 255, 255, 180)
+                    Menu.DrawRect(selX + selRadius, selY + selH - borderThickness, selW - selRadius * 2, borderThickness, 255, 255, 255, 180)
+                    Menu.DrawRect(selX, selY + selRadius, borderThickness, selH - selRadius * 2, 255, 255, 255, 180)
+                    Menu.DrawRect(selX + selW - borderThickness, selY + selRadius, borderThickness, selH - selRadius * 2, 255, 255, 255, 180)
                 end
             end
 
@@ -1190,19 +1213,19 @@ function Menu.DrawFooter()
                 local maxVisible = Menu.ItemsPerPage
                 local totalItems = #currentTab.items
                 local visibleItems = math.min(maxVisible, totalItems)
-                totalHeight = scaledPos.headerHeight + scaledPos.mainMenuHeight + scaledPos.mainMenuSpacing + (visibleItems * scaledPos.itemHeight)
+                totalHeight = scaledPos.headerHeight + (scaledPos.headerSpacing or 0) + scaledPos.mainMenuHeight + scaledPos.mainMenuSpacing + (visibleItems * scaledPos.itemHeight)
             else
-                totalHeight = scaledPos.headerHeight + scaledPos.mainMenuHeight + scaledPos.mainMenuSpacing
+                totalHeight = scaledPos.headerHeight + (scaledPos.headerSpacing or 0) + scaledPos.mainMenuHeight + scaledPos.mainMenuSpacing
             end
         else
-            totalHeight = scaledPos.headerHeight + scaledPos.mainMenuHeight + scaledPos.mainMenuSpacing
+            totalHeight = scaledPos.headerHeight + (scaledPos.headerSpacing or 0) + scaledPos.mainMenuHeight + scaledPos.mainMenuSpacing
         end
     else
         -- Sans bandeau Main Menu: header + items directement
         local maxVisible = Menu.ItemsPerPage
         local totalCategories = #Menu.Categories - 1
         local visibleCategories = math.min(maxVisible, totalCategories)
-        totalHeight = scaledPos.headerHeight + (visibleCategories * scaledPos.itemHeight)
+        totalHeight = scaledPos.headerHeight + (scaledPos.headerSpacing or 0) + (visibleCategories * scaledPos.itemHeight)
     end
 
     footerY = scaledPos.y + totalHeight + scaledPos.footerSpacing
@@ -1496,6 +1519,7 @@ function Menu.GetLayoutSegments()
     local width = scaledPos.width
     
     local headerH = scaledPos.headerHeight
+    local headerSp = scaledPos.headerSpacing or 0
     local menuBarH = scaledPos.mainMenuHeight
     local spacing = scaledPos.mainMenuSpacing
     local itemH = scaledPos.itemHeight
@@ -1506,11 +1530,11 @@ function Menu.GetLayoutSegments()
     local itemsH = 0
     
     if Menu.OpenedCategory then
-        -- Quand une categorie est ouverte: header + tabs bar + spacing + items
-        local menuBarY = startY + headerH
+        -- Quand une categorie est ouverte: header + headerSpacing + tabs bar + spacing + items
+        local menuBarY = startY + headerH + headerSp
         table.insert(segments, {y = menuBarY, h = menuBarH})
         
-        itemsY = startY + headerH + menuBarH + spacing
+        itemsY = startY + headerH + headerSp + menuBarH + spacing
         
         local category = Menu.Categories[Menu.OpenedCategory]
         if category and category.hasTabs and category.tabs then
@@ -1523,8 +1547,8 @@ function Menu.GetLayoutSegments()
             end
         end
     else
-        -- Sans bandeau: items directement apres le header
-        itemsY = startY + headerH
+        -- Sans bandeau: items apres le header + headerSpacing
+        itemsY = startY + headerH + headerSp
         
         local maxVisible = Menu.ItemsPerPage
         local totalCategories = #Menu.Categories - 1
@@ -1557,48 +1581,27 @@ function Menu.DrawBackground()
 
     local startY = scaledPos.y
     local headerH = scaledPos.headerHeight
+    local headerSp = scaledPos.headerSpacing or 0
     local menuBarH = scaledPos.mainMenuHeight
     local spacing = scaledPos.mainMenuSpacing
     local itemH = scaledPos.itemHeight
 
-    -- Lookup "Black Background" toggle UNE SEULE FOIS (pas dans une boucle par bande)
-    local bgAlpha = 0.94 -- 94% opacite = quasi-opaque style Korium
-    if Menu.Categories then
-        for _, cat in ipairs(Menu.Categories) do
-            if cat.name == "Settings" and cat.tabs then
-                for _, tab in ipairs(cat.tabs) do
-                    if tab.name == "General" and tab.items then
-                        for _, item in ipairs(tab.items) do
-                            if item.name == "Black Background" then
-                                if item.value == false then
-                                    bgAlpha = 0.6
-                                end
-                                break
-                            end
-                        end
-                        break
-                    end
-                end
-                break
-            end
-        end
-    end
-
-    -- Gris tres fonce RGB(15,15,15) normalise
-    local bgR = 0.059
-    local bgG = 0.059
-    local bgB = 0.059
+    -- Fond fixe rgba(13, 14, 14) @ 98% - plus de lookup "Black Background"
+    local bgR = 0.051
+    local bgG = 0.055
+    local bgB = 0.055
+    local bgAlpha = 0.98
 
     if Menu.OpenedCategory then
         -- Zone tabs: noir opaque
-        local tabsY = startY + headerH
+        local tabsY = startY + headerH + headerSp
         if Susano and Susano.DrawRectFilled then
             Susano.DrawRectFilled(x, tabsY, width, menuBarH, 0.0, 0.0, 0.0, 1.0, 0)
         else
             Menu.DrawRect(x, tabsY, width, menuBarH, 0, 0, 0, 255)
         end
 
-        -- Zone items: gris fonce a bgAlpha
+        -- Zone items
         local itemsY = tabsY + menuBarH + spacing
         local itemsH = 0
         local category = Menu.Categories[Menu.OpenedCategory]
@@ -1612,19 +1615,19 @@ function Menu.DrawBackground()
             if Susano and Susano.DrawRectFilled then
                 Susano.DrawRectFilled(x, itemsY, width, itemsH, bgR, bgG, bgB, bgAlpha, 0)
             else
-                Menu.DrawRect(x, itemsY, width, itemsH, 15, 15, 15, math.floor(bgAlpha * 255))
+                Menu.DrawRect(x, itemsY, width, itemsH, 13, 14, 14, math.floor(bgAlpha * 255))
             end
         end
     else
-        -- Vue categories: un seul rect gris fonce directement sous le header
-        local itemsY = startY + headerH
+        -- Vue categories
+        local itemsY = startY + headerH + headerSp
         local totalCat = #Menu.Categories - 1
         local itemsH = math.min(Menu.ItemsPerPage, totalCat) * itemH
         if itemsH > 0 then
             if Susano and Susano.DrawRectFilled then
                 Susano.DrawRectFilled(x, itemsY, width, itemsH, bgR, bgG, bgB, bgAlpha, 0)
             else
-                Menu.DrawRect(x, itemsY, width, itemsH, 15, 15, 15, math.floor(bgAlpha * 255))
+                Menu.DrawRect(x, itemsY, width, itemsH, 13, 14, 14, math.floor(bgAlpha * 255))
             end
         end
     end
@@ -2033,7 +2036,7 @@ function Menu.HandleInput()
             local menuY = Menu.Position.y
             local menuWidth = Menu.Position.width
             
-            local totalHeight = Menu.Position.headerHeight
+            local totalHeight = Menu.Position.headerHeight + (Menu.Position.headerSpacing or 0)
             if Menu.OpenedCategory then
                 local category = Menu.Categories[Menu.OpenedCategory]
                 if category and category.hasTabs and category.tabs then
