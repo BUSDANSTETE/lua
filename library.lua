@@ -241,12 +241,12 @@ function Menu.DrawHeader()
 
     if Menu.Banner.enabled then
         if Menu.bannerTexture and Menu.bannerTexture > 0 and Susano and Susano.DrawImage then
-            -- Fond noir avec coins arrondis couvrant TOUT le header (pas seulement bannerHeight)
+            -- Fond gris fonce (meme couleur que le menu) avec coins arrondis
             local bannerRadius = radius
             if Susano and Susano.DrawRectFilled then
-                Susano.DrawRectFilled(x, y, width, height, 0.0, 0.0, 0.0, 1.0, bannerRadius)
+                Susano.DrawRectFilled(x, y, width, height, 0.059, 0.059, 0.059, 0.94, bannerRadius)
             else
-                Menu.DrawTopRoundedRect(x, y, width, height, 0, 0, 0, 255, bannerRadius)
+                Menu.DrawTopRoundedRect(x, y, width, height, 15, 15, 15, 240, bannerRadius)
             end
 
             -- Calcul aspect ratio pour eviter l'etirement
@@ -560,37 +560,23 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local baseB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
 
         -- Barre de selection flottante style Korium
-        local floatPad = 10
+        local floatPad = 6
         local selX = x + floatPad
         local selW = width - (floatPad * 2)
-        local selH = itemHeight - 2
-        local selY = drawY + 1
+        local selH = itemHeight - 4
+        local selY = drawY + 2
         local selRadius = 4
 
-        -- Fond bleu Korium a 50% opacite
         if Susano and Susano.DrawRectFilled then
-            Susano.DrawRectFilled(selX, selY, selW, selH, baseR, baseG, baseB, 0.5, selRadius)
+            -- Bordure blanche: rect arrondi complet (pas de trous dans les coins)
+            Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.55, selRadius)
+            -- Fill interieur: rect arrondi 1px plus petit de chaque cote
+            Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.45, selRadius)
         else
             Menu.DrawRoundedRect(selX, selY, selW, selH,
-                math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 128, selRadius)
-        end
-
-        -- Bordure blanche fine
-        local borderThickness = 1
-        if Susano and Susano.DrawRectFilled then
-            -- Top
-            Susano.DrawRectFilled(selX + selRadius, selY, selW - selRadius * 2, borderThickness, 1.0, 1.0, 1.0, 0.7, 0)
-            -- Bottom
-            Susano.DrawRectFilled(selX + selRadius, selY + selH - borderThickness, selW - selRadius * 2, borderThickness, 1.0, 1.0, 1.0, 0.7, 0)
-            -- Left
-            Susano.DrawRectFilled(selX, selY + selRadius, borderThickness, selH - selRadius * 2, 1.0, 1.0, 1.0, 0.7, 0)
-            -- Right
-            Susano.DrawRectFilled(selX + selW - borderThickness, selY + selRadius, borderThickness, selH - selRadius * 2, 1.0, 1.0, 1.0, 0.7, 0)
-        else
-            Menu.DrawRect(selX + selRadius, selY, selW - selRadius * 2, borderThickness, 255, 255, 255, 180)
-            Menu.DrawRect(selX + selRadius, selY + selH - borderThickness, selW - selRadius * 2, borderThickness, 255, 255, 255, 180)
-            Menu.DrawRect(selX, selY + selRadius, borderThickness, selH - selRadius * 2, 255, 255, 255, 180)
-            Menu.DrawRect(selX + selW - borderThickness, selY + selRadius, borderThickness, selH - selRadius * 2, 255, 255, 255, 180)
+                255, 255, 255, 140, selRadius)
+            Menu.DrawRoundedRect(selX + 1, selY + 1, selW - 2, selH - 2,
+                math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 115, selRadius)
         end
     end
 
@@ -1009,33 +995,23 @@ function Menu.DrawCategories()
                 local baseB = Menu.Colors.SelectedBg.b / 255.0
 
                 -- Barre de selection flottante style Korium
-                local floatPad = 10
+                local floatPad = 6
                 local selX = x + floatPad
                 local selW = width - (floatPad * 2)
-                local selH = itemHeight - 2
-                local selY = drawY + 1
+                local selH = itemHeight - 4
+                local selY = drawY + 2
                 local selRadius = 4
 
-                -- Fond bleu Korium a 50% opacite
                 if Susano and Susano.DrawRectFilled then
-                    Susano.DrawRectFilled(selX, selY, selW, selH, baseR, baseG, baseB, 0.5, selRadius)
+                    -- Bordure blanche: rect arrondi complet
+                    Susano.DrawRectFilled(selX, selY, selW, selH, 1.0, 1.0, 1.0, 0.55, selRadius)
+                    -- Fill interieur: rect arrondi 1px plus petit
+                    Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.45, selRadius)
                 else
                     Menu.DrawRoundedRect(selX, selY, selW, selH,
-                        math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 128, selRadius)
-                end
-
-                -- Bordure blanche fine
-                local borderThickness = 1
-                if Susano and Susano.DrawRectFilled then
-                    Susano.DrawRectFilled(selX + selRadius, selY, selW - selRadius * 2, borderThickness, 1.0, 1.0, 1.0, 0.7, 0)
-                    Susano.DrawRectFilled(selX + selRadius, selY + selH - borderThickness, selW - selRadius * 2, borderThickness, 1.0, 1.0, 1.0, 0.7, 0)
-                    Susano.DrawRectFilled(selX, selY + selRadius, borderThickness, selH - selRadius * 2, 1.0, 1.0, 1.0, 0.7, 0)
-                    Susano.DrawRectFilled(selX + selW - borderThickness, selY + selRadius, borderThickness, selH - selRadius * 2, 1.0, 1.0, 1.0, 0.7, 0)
-                else
-                    Menu.DrawRect(selX + selRadius, selY, selW - selRadius * 2, borderThickness, 255, 255, 255, 180)
-                    Menu.DrawRect(selX + selRadius, selY + selH - borderThickness, selW - selRadius * 2, borderThickness, 255, 255, 255, 180)
-                    Menu.DrawRect(selX, selY + selRadius, borderThickness, selH - selRadius * 2, 255, 255, 255, 180)
-                    Menu.DrawRect(selX + selW - borderThickness, selY + selRadius, borderThickness, selH - selRadius * 2, 255, 255, 255, 180)
+                        255, 255, 255, 140, selRadius)
+                    Menu.DrawRoundedRect(selX + 1, selY + 1, selW - 2, selH - 2,
+                        math.floor(baseR * 255), math.floor(baseG * 255), math.floor(baseB * 255), 115, selRadius)
                 end
             end
 
@@ -1581,7 +1557,7 @@ function Menu.DrawBackground()
     local itemH = scaledPos.itemHeight
 
     -- Lookup "Black Background" toggle UNE SEULE FOIS (pas dans une boucle par bande)
-    local bgAlpha = 0.95 -- 95% opacite = quasi-opaque style Korium
+    local bgAlpha = 0.94 -- 94% opacite = quasi-opaque style Korium
     if Menu.Categories then
         for _, cat in ipairs(Menu.Categories) do
             if cat.name == "Settings" and cat.tabs then
@@ -1603,10 +1579,10 @@ function Menu.DrawBackground()
         end
     end
 
-    -- Gris tres fonce RGB(20,20,20) normalise
-    local bgR = 0.078
-    local bgG = 0.078
-    local bgB = 0.078
+    -- Gris tres fonce RGB(15,15,15) normalise
+    local bgR = 0.059
+    local bgG = 0.059
+    local bgB = 0.059
 
     if Menu.OpenedCategory then
         -- Zone tabs: noir opaque
@@ -1631,7 +1607,7 @@ function Menu.DrawBackground()
             if Susano and Susano.DrawRectFilled then
                 Susano.DrawRectFilled(x, itemsY, width, itemsH, bgR, bgG, bgB, bgAlpha, 0)
             else
-                Menu.DrawRect(x, itemsY, width, itemsH, 20, 20, 20, math.floor(bgAlpha * 255))
+                Menu.DrawRect(x, itemsY, width, itemsH, 15, 15, 15, math.floor(bgAlpha * 255))
             end
         end
     else
@@ -1643,7 +1619,7 @@ function Menu.DrawBackground()
             if Susano and Susano.DrawRectFilled then
                 Susano.DrawRectFilled(x, itemsY, width, itemsH, bgR, bgG, bgB, bgAlpha, 0)
             else
-                Menu.DrawRect(x, itemsY, width, itemsH, 20, 20, 20, math.floor(bgAlpha * 255))
+                Menu.DrawRect(x, itemsY, width, itemsH, 15, 15, 15, math.floor(bgAlpha * 255))
             end
         end
     end
