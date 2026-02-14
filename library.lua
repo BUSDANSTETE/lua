@@ -76,8 +76,8 @@ Menu.Banner = {
 }
 
 Menu.bannerTexture = nil
-Menu.bannerWidth = 90
-Menu.bannerHeight = 90
+Menu.bannerWidth = 0
+Menu.bannerHeight = 0
 
 function Menu.LoadBannerTexture(url)
     if not url or url == "" then return end
@@ -565,7 +565,7 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local floatPad = 6
         local selX = x + floatPad
         local selW = width - (floatPad * 2)
-        local selH = itemHeight - 20
+        local selH = itemHeight - 25
         local selY = drawY + 10
         local selRadius = 4
 
