@@ -49,7 +49,7 @@ LibraryCode = string.gsub(
     LibraryCode,
     'Menu%.DrawText%(textX, textY, category%.name, 17, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
     [[do
-                local _iSz = itemHeight * 0.375
+                local _iSz = itemHeight * 0.5
                 local _iOk = false
                 if category.iconUrl and Menu.IconTextures and Menu.IconTextures[category.name] then
                     local _t = Menu.IconTextures[category.name]
@@ -135,7 +135,7 @@ end
 -- Cache for category icon textures loaded from URLs
 Menu.IconTextures = {}
 Menu.FooterLogoTex = nil
-Menu.FooterText = "Dynasty" -- <<< CHANGE THIS to your menu name
+Menu.FooterText = "" -- <<< CHANGE THIS to your menu name
 
 -- Footer logo URL (small square image, ideally 64x64 or 128x128 PNG)
 Menu.FooterLogoUrl = "https://i.imgur.com/oOp4BF9.jpeg" -- <<< REPLACE with your logo URL
