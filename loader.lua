@@ -176,7 +176,6 @@ function Menu.LoadAllIcons()
         end
     end
     Menu.LoadFooterLogo(Menu.FooterLogoUrl)
-    -- Charger les fleches scrollbar
     if Menu.ArrowUpUrl and Menu.ArrowUpUrl ~= "" then
         Menu.LoadIconTexture("_arrowUp", Menu.ArrowUpUrl)
     end
