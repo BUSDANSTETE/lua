@@ -241,12 +241,12 @@ function Menu.DrawHeader()
 
     if Menu.Banner.enabled then
         if Menu.bannerTexture and Menu.bannerTexture > 0 and Susano and Susano.DrawImage then
-            -- Fond noir avec coins arrondis (top uniquement)
+            -- Fond noir avec coins arrondis couvrant TOUT le header (pas seulement bannerHeight)
             local bannerRadius = radius
             if Susano and Susano.DrawRectFilled then
-                Susano.DrawRectFilled(x, y, width, bannerHeight, 0.0, 0.0, 0.0, 1.0, bannerRadius)
+                Susano.DrawRectFilled(x, y, width, height, 0.0, 0.0, 0.0, 1.0, bannerRadius)
             else
-                Menu.DrawTopRoundedRect(x, y, width, bannerHeight, 0, 0, 0, 255, bannerRadius)
+                Menu.DrawTopRoundedRect(x, y, width, height, 0, 0, 0, 255, bannerRadius)
             end
 
             -- Calcul aspect ratio pour eviter l'etirement
@@ -264,9 +264,9 @@ function Menu.DrawHeader()
                 drawH = width / aspectRatio
             end
 
-            -- Centrage horizontal et vertical
+            -- Centrage horizontal et vertical dans la zone header complete
             local drawX = x + (width - drawW) / 2
-            local drawY = y + (bannerHeight - drawH) / 2
+            local drawY = y + (height - drawH) / 2
 
             Susano.DrawImage(Menu.bannerTexture, drawX, drawY, drawW, drawH, 1, 1, 1, 1, 0)
         else
@@ -1571,161 +1571,79 @@ function Menu.DrawBackground()
     local x = scaledPos.x
     local y = scaledPos.y
     local width = scaledPos.width - 1
-    
+
     local segments, fullHeight = Menu.GetLayoutSegments()
 
-    local r = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.r) or 148
-    local g = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) or 0
-    local b = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) or 211
-    
     local startY = scaledPos.y
     local headerH = scaledPos.headerHeight
     local menuBarH = scaledPos.mainMenuHeight
     local spacing = scaledPos.mainMenuSpacing
     local itemH = scaledPos.itemHeight
-    
-    local itemsY = 0
-    local itemsH = 0
-    
+
+    -- Lookup "Black Background" toggle UNE SEULE FOIS (pas dans une boucle par bande)
+    local bgAlpha = 0.95 -- 95% opacite = quasi-opaque style Korium
+    if Menu.Categories then
+        for _, cat in ipairs(Menu.Categories) do
+            if cat.name == "Settings" and cat.tabs then
+                for _, tab in ipairs(cat.tabs) do
+                    if tab.name == "General" and tab.items then
+                        for _, item in ipairs(tab.items) do
+                            if item.name == "Black Background" then
+                                if item.value == false then
+                                    bgAlpha = 0.6
+                                end
+                                break
+                            end
+                        end
+                        break
+                    end
+                end
+                break
+            end
+        end
+    end
+
+    -- Gris tres fonce RGB(20,20,20) normalise
+    local bgR = 0.078
+    local bgG = 0.078
+    local bgB = 0.078
+
     if Menu.OpenedCategory then
-        itemsY = startY + headerH + menuBarH + spacing
-        
+        -- Zone tabs: noir opaque
+        local tabsY = startY + headerH
+        if Susano and Susano.DrawRectFilled then
+            Susano.DrawRectFilled(x, tabsY, width, menuBarH, 0.0, 0.0, 0.0, 1.0, 0)
+        else
+            Menu.DrawRect(x, tabsY, width, menuBarH, 0, 0, 0, 255)
+        end
+
+        -- Zone items: gris fonce a bgAlpha
+        local itemsY = tabsY + menuBarH + spacing
+        local itemsH = 0
         local category = Menu.Categories[Menu.OpenedCategory]
         if category and category.hasTabs and category.tabs then
             local currentTab = category.tabs[Menu.CurrentTab]
             if currentTab and currentTab.items then
-                local maxVisible = Menu.ItemsPerPage
-                local totalItems = #currentTab.items
-                local visibleItems = math.min(maxVisible, totalItems)
-                itemsH = visibleItems * itemH
+                itemsH = math.min(Menu.ItemsPerPage, #currentTab.items) * itemH
+            end
+        end
+        if itemsH > 0 then
+            if Susano and Susano.DrawRectFilled then
+                Susano.DrawRectFilled(x, itemsY, width, itemsH, bgR, bgG, bgB, bgAlpha, 0)
+            else
+                Menu.DrawRect(x, itemsY, width, itemsH, 20, 20, 20, math.floor(bgAlpha * 255))
             end
         end
     else
-        -- Sans bandeau Main Menu: items directement apres le header
-        itemsY = startY + headerH
-        
-        local maxVisible = Menu.ItemsPerPage
-        local totalCategories = #Menu.Categories - 1
-        local visibleCategories = math.min(maxVisible, totalCategories)
-        itemsH = visibleCategories * itemH
-    end
-    
-    local itemsEndY = itemsY + itemsH
-    
-    -- Calculer la position de la barre Main Menu
-    local menuBarY = startY + headerH
-    if not Menu.OpenedCategory then
-        menuBarY = startY + headerH
-    end
-    
-    for i, seg in ipairs(segments) do
-        if i == #segments then
-            break
-        end
-        
-        if seg.y >= itemsEndY then
-            break
-        end
-        
-        -- Ne pas dessiner le fond avant la barre Main Menu
-        -- S'assurer que le segment commence au moins ÃƒÂ  menuBarY
-        if seg.y < menuBarY then
-            -- Ajuster le segment pour commencer ÃƒÂ  menuBarY
-            local offset = menuBarY - seg.y
-            if offset >= seg.h then
-                -- Segment complÃƒÂ¨tement au-dessus de la barre Main Menu, ignorer
-                -- Passer au segment suivant
+        -- Vue categories: un seul rect gris fonce directement sous le header
+        local itemsY = startY + headerH
+        local totalCat = #Menu.Categories - 1
+        local itemsH = math.min(Menu.ItemsPerPage, totalCat) * itemH
+        if itemsH > 0 then
+            if Susano and Susano.DrawRectFilled then
+                Susano.DrawRectFilled(x, itemsY, width, itemsH, bgR, bgG, bgB, bgAlpha, 0)
             else
-                -- Ajuster le segment
-                seg = {y = menuBarY, h = seg.h - offset}
-            end
-        end
-        
-        -- VÃƒÂ©rifier ÃƒÂ  nouveau aprÃƒÂ¨s ajustement
-        if seg.y < menuBarY or seg.h <= 0 then
-            -- Ignorer ce segment
-        else
-            local segSteps = math.ceil(seg.h / 2)
-            
-            for i = 0, segSteps - 1 do
-                local localY = i * 2
-                local drawH = 2
-                if localY + drawH > seg.h then drawH = seg.h - localY end
-                
-                local currentY = seg.y + localY
-                
-                -- Ne pas dessiner avant la barre Main Menu
-                if currentY < menuBarY then
-                    -- Ajuster pour commencer ÃƒÂ  menuBarY
-                    local adjust = menuBarY - currentY
-                    if adjust >= drawH then
-                        -- Cette partie est complÃƒÂ¨tement avant menuBarY, ignorer
-                    else
-                        currentY = menuBarY
-                        drawH = drawH - adjust
-                    end
-                end
-                
-                if currentY >= itemsEndY then
-                    break
-                end
-                if currentY + drawH > itemsEndY then
-                    drawH = itemsEndY - currentY
-                    if drawH <= 0 then
-                        break
-                    end
-                end
-                
-                -- Verifier si c'est la zone des tabs (seulement quand une categorie est ouverte)
-                local isTabArea = false
-                if Menu.OpenedCategory and currentY >= menuBarY and currentY < menuBarY + menuBarH then
-                    isTabArea = true
-                end
-                
-                -- Fond noir (opaque ou transparent selon l'option, sauf pour les tabs)
-                local backgroundAlpha = 1.0
-                
-                -- Les tabs doivent toujours rester noirs opaques
-                if isTabArea then
-                    -- Zone tabs: noir opaque
-                    if Susano and Susano.DrawRectFilled then
-                        Susano.DrawRectFilled(x, currentY, width, drawH, 0.0, 0.0, 0.0, 1.0, 0)
-                    else
-                        Menu.DrawRect(x, currentY, width, drawH, 0, 0, 0, 255)
-                    end
-                else
-                    -- Verifier l'option "Black Background"
-                    local blackBackgroundItem = nil
-                    if Menu.Categories then
-                        for _, cat in ipairs(Menu.Categories) do
-                            if cat.name == "Settings" and cat.tabs then
-                                for _, tab in ipairs(cat.tabs) do
-                                    if tab.name == "General" and tab.items then
-                                        for _, item in ipairs(tab.items) do
-                                            if item.name == "Black Background" then
-                                                blackBackgroundItem = item
-                                                break
-                                            end
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                    
-                    if blackBackgroundItem and blackBackgroundItem.value == false then
-                        backgroundAlpha = 0.4
-                    else
-                        backgroundAlpha = 0.86
-                    end
-                
-                    -- Zone items: gris fonce (20,20,20)
-                    if Susano and Susano.DrawRectFilled then
-                        Susano.DrawRectFilled(x, currentY, width, drawH, 0.078, 0.078, 0.078, backgroundAlpha, 0)
-                    else
-                        Menu.DrawRect(x, currentY, width, drawH, 20, 20, 20, math.floor(backgroundAlpha * 255))
-                    end
-                end
+                Menu.DrawRect(x, itemsY, width, itemsH, 20, 20, 20, math.floor(bgAlpha * 255))
             end
         end
     end
