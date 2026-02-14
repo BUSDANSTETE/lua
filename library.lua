@@ -1005,7 +1005,7 @@ function Menu.DrawCategories()
                 local floatPad = 6
                 local selX = x + floatPad
                 local selW = width - (floatPad * 2)
-                local selH = itemHeight - 2
+                local selH = itemHeight - 15
                 local selY = drawY + 10
                 local selRadius = 4
 
