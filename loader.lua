@@ -87,8 +87,8 @@ LibraryCode = string.gsub(
 -- and add centered logo drawing
 LibraryCode = string.gsub(
     LibraryCode,
-    'local footerText = "BusDansTete X Juro"',
-    'local footerText = Menu.FooterText or "Dynasty"'
+    'local footerText = ""',
+    'local footerText = Menu.FooterText or ""'
 )
 
 -- Inject logo drawing right after footer left-text rendering
@@ -14141,3 +14141,4 @@ if Actions.clearAllAttachedItem then
         Menu.ClearAllAttachedProps()
     end
 end
+
