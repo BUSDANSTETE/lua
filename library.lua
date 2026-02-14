@@ -71,7 +71,7 @@ end
 
 Menu.Banner = {
     enabled = true,
-    imageUrl = "https://i.imgur.com/8z3fWq2.png",
+    imageUrl = "https://i.imgur.com/xv46Mbz.png",
     height = 100
 }
 
@@ -574,16 +574,12 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local selRadius = 4
 
         if Susano and Susano.DrawRectFilled then
-            -- Glow externe: halo lumineux autour de la barre
             local glowPad = 4
             Susano.DrawRectFilled(selX - glowPad, selY - glowPad, selW + glowPad * 2, selH + glowPad * 2, baseR, baseG, baseB, 0.08, selRadius + 3)
             local glowPad2 = 2
             Susano.DrawRectFilled(selX - glowPad2, selY - glowPad2, selW + glowPad2 * 2, selH + glowPad2 * 2, baseR, baseG, baseB, 0.12, selRadius + 1)
-            -- Outline gris clair
             Susano.DrawRectFilled(selX, selY, selW, selH, 0.216, 0.216, 0.216, 0.98, selRadius)
-            -- Fill bleu
             Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.85, selRadius)
-            -- Renfort gauche
             Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.5, selH - 2, baseR, baseG, baseB, 0.10, selRadius)
         else
             Menu.DrawRoundedRect(selX, selY, selW, selH, 55, 55, 55, 250, selRadius)
@@ -1016,16 +1012,12 @@ function Menu.DrawCategories()
                 local selRadius = 4
 
                 if Susano and Susano.DrawRectFilled then
-                    -- Glow externe
                     local glowPad = 4
                     Susano.DrawRectFilled(selX - glowPad, selY - glowPad, selW + glowPad * 2, selH + glowPad * 2, baseR, baseG, baseB, 0.08, selRadius + 3)
                     local glowPad2 = 2
                     Susano.DrawRectFilled(selX - glowPad2, selY - glowPad2, selW + glowPad2 * 2, selH + glowPad2 * 2, baseR, baseG, baseB, 0.12, selRadius + 1)
-                    -- Outline gris clair
                     Susano.DrawRectFilled(selX, selY, selW, selH, 0.216, 0.216, 0.216, 0.98, selRadius)
-                    -- Fill bleu
                     Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.85, selRadius)
-                    -- Renfort gauche
                     Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.5, selH - 2, baseR, baseG, baseB, 0.10, selRadius)
                 else
                     Menu.DrawRoundedRect(selX, selY, selW, selH, 55, 55, 55, 250, selRadius)
@@ -1237,7 +1229,7 @@ function Menu.DrawFooter()
     local scaledFooterSize = footerSize * scale
     local footerTextY = footerY + math.floor((footerHeight - scaledFooterSize) / 2)
 
-    local footerText = "BUSDANSTETE"
+    local footerText = Menu.FooterText or "BUSDANSTETE"
     local currentX = x + footerPadding
 
     local textWidth = 0
@@ -1253,6 +1245,14 @@ function Menu.DrawFooter()
     local tB = Menu.Colors.TextWhite.b / 255.0
     Menu.DrawText(currentX, footerTextY, footerText, footerSize, tR, tG, tB, 1.0)
     Menu.DrawText(currentX + 1, footerTextY, footerText, footerSize, tR, tG, tB, 1.0)
+
+    -- Logo footer centre (charge via Menu.LoadFooterLogo dans loader.lua)
+    if Menu.FooterLogoTex and Menu.FooterLogoTex > 0 and Susano and Susano.DrawImage then
+        local _lSz = footerHeight * 0.7
+        local _lX = x + (footerWidth / 2) - (_lSz / 2)
+        local _lY = footerY + (footerHeight - _lSz) / 2
+        Susano.DrawImage(Menu.FooterLogoTex, _lX, _lY, _lSz, _lSz, 1, 1, 1, 1, 0)
+    end
 
     local displayIndex
     local totalItems
