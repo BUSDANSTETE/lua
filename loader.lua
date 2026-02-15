@@ -654,6 +654,7 @@ Menu.Categories = {
             { name = "Tiny Player", type = "toggle", value = false },
         }},
         { name = "Wardrobe", items = {
+            { name = "", isSeparator = true, separatorText = "Clothing" },
             { name = "Hat", type = "selector", options = {}, selected = 1 },
             { name = "Mask", type = "selector", options = {}, selected = 1 },
             { name = "Glasses", type = "selector", options = {}, selected = 1 },
@@ -2585,7 +2586,6 @@ local function ToggleNoRagdoll(enable)
     
     Susano.InjectResource("any", code)
 end
-
 
 local function SetPedClothing(componentId, drawableId, textureId)
     local ped = PlayerPedId()
@@ -5031,6 +5031,8 @@ if Actions.deleteAllPropsItem then
         DeleteAllProps()
     end
 end
+
+
 
 local function _clampInt(v, mn, mx)
     v = tonumber(v) or mn
@@ -12055,8 +12057,6 @@ end
             end
         end
     end
-
-
 
 
 CreateThread(function()
