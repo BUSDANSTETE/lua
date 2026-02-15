@@ -264,13 +264,8 @@ function Menu.DrawHeader()
             local imgH = Menu.bannerHeight or bannerHeight
             local aspectRatio = imgW / imgH
             local drawW, drawH
-            if (availW / availH) > aspectRatio then
-                drawH = availH
-                drawW = availH * aspectRatio
-            else
-                drawW = availW
-                drawH = availW / aspectRatio
-            end
+            if (availW / availH) > aspectRatio then drawH = availH; drawW = availH * aspectRatio
+            else drawW = availW; drawH = availW / aspectRatio end
             local drawX = x + framePad + (availW - drawW) / 2
             local drawY = y + framePad + (availH - drawH) / 2
             Susano.DrawImage(Menu.bannerTexture, drawX, drawY, drawW, drawH, 1, 1, 1, 1, imgRounding)
@@ -291,34 +286,27 @@ function Menu.DrawHeader()
 end
 
 function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems, isMainMenu, menuWidth)
-    if totalItems < 2 then
-        return
-    end
+    if totalItems < 2 then return end
 
     local scaledPos = Menu.GetScaledPosition()
     local scale = Menu.Scale or 1.0
     local scrollbarWidth = scaledPos.scrollbarWidth
     local scrollbarPadding = scaledPos.scrollbarPadding
     local width = menuWidth or scaledPos.width
-
     local scrollbarX = x - scrollbarWidth - scrollbarPadding
 
     local barY = startY
     local barH = visibleHeight
-
     local arrowH = math.floor(12 * scale)
     local trackY = barY + arrowH + 1
     local trackH = barH - (arrowH * 2) - 2
-
     if trackH < 10 then return end
 
     local bgR = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.r) and (Menu.Colors.SelectedBg.r / 255.0) or 1.0
     local bgG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
     local bgB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
-
     local barRadius = scrollbarWidth / 2
 
-    -- Barre exterieure (outline gris Korium)
     if Susano and Susano.DrawRectFilled then
         Susano.DrawRectFilled(scrollbarX, barY, scrollbarWidth, barH, 0.216, 0.216, 0.216, 0.85, barRadius)
         Susano.DrawRectFilled(scrollbarX + 1, barY + 1, scrollbarWidth - 2, barH - 2, 0.05, 0.05, 0.05, 0.92, barRadius)
@@ -327,80 +315,60 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
         Menu.DrawRoundedRect(scrollbarX + 1, barY + 1, scrollbarWidth - 2, barH - 2, 13, 13, 13, 235, barRadius)
     end
 
-    -- Icones fleches
     if Susano and Susano.DrawImage then
         local iconSz = scrollbarWidth - 2
         local iconX = scrollbarX + 1
-
         local arrowUpTex = Menu.IconTextures and Menu.IconTextures["_arrowUp"]
         if arrowUpTex and arrowUpTex > 0 then
-            local iconY = barY + math.floor((arrowH - iconSz) / 2)
-            Susano.DrawImage(arrowUpTex, iconX, iconY, iconSz, iconSz, 1, 1, 1, 0.75, 0)
+            Susano.DrawImage(arrowUpTex, iconX, barY + math.floor((arrowH - iconSz) / 2), iconSz, iconSz, 1, 1, 1, 0.75, 0)
         end
-
         local arrowDownTex = Menu.IconTextures and Menu.IconTextures["_arrowDown"]
         if arrowDownTex and arrowDownTex > 0 then
-            local iconY = barY + barH - arrowH + math.floor((arrowH - iconSz) / 2)
-            Susano.DrawImage(arrowDownTex, iconX, iconY, iconSz, iconSz, 1, 1, 1, 0.75, 0)
+            Susano.DrawImage(arrowDownTex, iconX, barY + barH - arrowH + math.floor((arrowH - iconSz) / 2), iconSz, iconSz, 1, 1, 1, 0.75, 0)
         end
     end
 
-    -- Progression pure 0..1
     local adjustedIndex = selectedIndex
-    if isMainMenu then
-        adjustedIndex = selectedIndex - 1
-    end
-    local progress = (adjustedIndex - 1) / math.max(1, totalItems - 1)
-    progress = math.max(0, math.min(1, progress))
+    if isMainMenu then adjustedIndex = selectedIndex - 1 end
+    local progress = math.max(0, math.min(1, (adjustedIndex - 1) / math.max(1, totalItems - 1)))
 
     local thumbHeight = math.max(trackH * 0.15, math.min(trackH * 0.25, math.floor(20 * scale)))
-    local maxThumbY = trackY + trackH - thumbHeight
-    local thumbY = trackY + progress * (trackH - thumbHeight)
-    thumbY = math.max(trackY, math.min(maxThumbY, thumbY))
+    local thumbY = math.max(trackY, math.min(trackY + trackH - thumbHeight, trackY + progress * (trackH - thumbHeight)))
 
-    -- Reset sync
     local ctx = isMainMenu and "cat" or ("items_" .. tostring(Menu.CurrentTab or 0))
     if Menu.scrollbarContext ~= ctx then
         Menu.scrollbarY = nil
         Menu.scrollbarHeight = nil
         Menu.scrollbarContext = ctx
     end
+    if not Menu.scrollbarY then Menu.scrollbarY = thumbY end
+    if not Menu.scrollbarHeight then Menu.scrollbarHeight = thumbHeight end
 
-    if not Menu.scrollbarY then
-        Menu.scrollbarY = thumbY
-    end
-    if not Menu.scrollbarHeight then
-        Menu.scrollbarHeight = thumbHeight
-    end
-
-    local smoothSpeed = 0.18
-    Menu.scrollbarY = Menu.scrollbarY + (thumbY - Menu.scrollbarY) * smoothSpeed
-    Menu.scrollbarHeight = Menu.scrollbarHeight + (thumbHeight - Menu.scrollbarHeight) * smoothSpeed
+    Menu.scrollbarY = Menu.scrollbarY + (thumbY - Menu.scrollbarY) * 0.18
+    Menu.scrollbarHeight = Menu.scrollbarHeight + (thumbHeight - Menu.scrollbarHeight) * 0.18
 
     local thumbPad = 2
     local thumbW = scrollbarWidth - (thumbPad * 2)
     local thumbRadius = thumbW / 2
     if Susano and Susano.DrawRectFilled then
-        -- Bloom large
-        Susano.DrawRectFilled(scrollbarX + thumbPad - 3, Menu.scrollbarY - 3,
-            thumbW + 6, Menu.scrollbarHeight + 6,
-            bgR * 0.3, bgG * 0.3, bgB * 0.3, 0.15,
-            thumbRadius + 3)
-        -- Glow proche
-        Susano.DrawRectFilled(scrollbarX + thumbPad - 1, Menu.scrollbarY - 1,
-            thumbW + 2, Menu.scrollbarHeight + 2,
-            bgR * 0.5, bgG * 0.5, bgB * 0.5, 0.35,
-            thumbRadius + 1)
+        -- Bloom large visible
+        Susano.DrawRectFilled(scrollbarX - 2, Menu.scrollbarY - 4,
+            scrollbarWidth + 4, Menu.scrollbarHeight + 8,
+            bgR * 0.5, bgG * 0.5, bgB * 0.5, 0.20,
+            thumbRadius + 4)
+        -- Glow moyen
+        Susano.DrawRectFilled(scrollbarX + thumbPad - 2, Menu.scrollbarY - 2,
+            thumbW + 4, Menu.scrollbarHeight + 4,
+            bgR * 0.6, bgG * 0.6, bgB * 0.6, 0.35,
+            thumbRadius + 2)
         -- Thumb
         Susano.DrawRectFilled(scrollbarX + thumbPad, Menu.scrollbarY,
             thumbW, Menu.scrollbarHeight,
-            bgR, bgG, bgB, 1.0,
-            thumbRadius)
+            bgR, bgG, bgB, 1.0, thumbRadius)
     else
         Menu.DrawRoundedRect(scrollbarX + thumbPad, Menu.scrollbarY,
             thumbW, Menu.scrollbarHeight,
-            math.floor(bgR * 255), math.floor(bgG * 255), math.floor(bgB * 255), 255,
-            thumbRadius)
+            math.floor(bgR * 255), math.floor(bgG * 255), math.floor(bgB * 255), 255, thumbRadius)
     end
 end
 function Menu.DrawTabs(category, x, startY, width, tabHeight)
@@ -597,12 +565,9 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local selY = drawY + math.floor((itemHeight - selH) / 2)
         local selRadius = 4
         if Susano and Susano.DrawRectFilled then
-            local bloomPad = 8
-            Susano.DrawRectFilled(selX - bloomPad, selY - bloomPad, selW + bloomPad * 2, selH + bloomPad * 2, baseR, baseG, baseB, 0.04, selRadius + 6)
-            local glowPad = 4
-            Susano.DrawRectFilled(selX - glowPad, selY - glowPad, selW + glowPad * 2, selH + glowPad * 2, baseR, baseG, baseB, 0.08, selRadius + 3)
-            local glowPad2 = 2
-            Susano.DrawRectFilled(selX - glowPad2, selY - glowPad2, selW + glowPad2 * 2, selH + glowPad2 * 2, baseR, baseG, baseB, 0.14, selRadius + 1)
+            Susano.DrawRectFilled(selX - 10, selY - 6, selW + 20, selH + 12, baseR, baseG, baseB, 0.07, selRadius + 8)
+            Susano.DrawRectFilled(selX - 5, selY - 3, selW + 10, selH + 6, baseR, baseG, baseB, 0.15, selRadius + 4)
+            Susano.DrawRectFilled(selX - 2, selY - 2, selW + 4, selH + 4, baseR, baseG, baseB, 0.22, selRadius + 1)
             Susano.DrawRectFilled(selX, selY, selW, selH, 0.216, 0.216, 0.216, 0.98, selRadius)
             Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.85, selRadius)
             Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.5, selH - 2, baseR, baseG, baseB, 0.10, selRadius)
@@ -1035,12 +1000,9 @@ function Menu.DrawCategories()
                 local selY = drawY + math.floor((itemHeight - selH) / 2)
                 local selRadius = 4
                 if Susano and Susano.DrawRectFilled then
-                    local bloomPad = 8
-                    Susano.DrawRectFilled(selX - bloomPad, selY - bloomPad, selW + bloomPad * 2, selH + bloomPad * 2, baseR, baseG, baseB, 0.04, selRadius + 6)
-                    local glowPad = 4
-                    Susano.DrawRectFilled(selX - glowPad, selY - glowPad, selW + glowPad * 2, selH + glowPad * 2, baseR, baseG, baseB, 0.08, selRadius + 3)
-                    local glowPad2 = 2
-                    Susano.DrawRectFilled(selX - glowPad2, selY - glowPad2, selW + glowPad2 * 2, selH + glowPad2 * 2, baseR, baseG, baseB, 0.14, selRadius + 1)
+                    Susano.DrawRectFilled(selX - 10, selY - 6, selW + 20, selH + 12, baseR, baseG, baseB, 0.07, selRadius + 8)
+                    Susano.DrawRectFilled(selX - 5, selY - 3, selW + 10, selH + 6, baseR, baseG, baseB, 0.15, selRadius + 4)
+                    Susano.DrawRectFilled(selX - 2, selY - 2, selW + 4, selH + 4, baseR, baseG, baseB, 0.22, selRadius + 1)
                     Susano.DrawRectFilled(selX, selY, selW, selH, 0.216, 0.216, 0.216, 0.98, selRadius)
                     Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.85, selRadius)
                     Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.5, selH - 2, baseR, baseG, baseB, 0.10, selRadius)
@@ -1054,16 +1016,18 @@ function Menu.DrawCategories()
             local textY = itemY + itemHeight / 2 - 8
             Menu.DrawText(textX, textY, category.name, 19, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
 
-            local _chevSz = math.floor(12 * (Menu.Scale or 1.0))
-            local _chevX = x + width - _chevSz - 10
+            local _chevSz = math.floor(16 * (Menu.Scale or 1.0))
+            local _chevX = x + width - _chevSz - 18
             local _chevY = itemY + math.floor((itemHeight - _chevSz) / 2)
             local _chevTex = Menu.IconTextures and Menu.IconTextures["_chevron"]
             if _chevTex and _chevTex > 0 and Susano and Susano.DrawImage then
-                -- Bloom subtil sur chevron
-                Susano.DrawImage(_chevTex, _chevX - 2, _chevY - 2, _chevSz + 4, _chevSz + 4, Menu.Colors.SelectedBg.r / 255.0, Menu.Colors.SelectedBg.g / 255.0, Menu.Colors.SelectedBg.b / 255.0, 0.06, 0)
+                local _cR = Menu.Colors.SelectedBg.r / 255.0
+                local _cG = Menu.Colors.SelectedBg.g / 255.0
+                local _cB = Menu.Colors.SelectedBg.b / 255.0
+                Susano.DrawImage(_chevTex, _chevX - 3, _chevY - 3, _chevSz + 6, _chevSz + 6, _cR, _cG, _cB, 0.10, 0)
                 Susano.DrawImage(_chevTex, _chevX, _chevY, _chevSz, _chevSz, 1, 1, 1, 0.55, 0)
             else
-                Menu.DrawText(x + width - 22, textY, ">", 19, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 0.55)
+                Menu.DrawText(x + width - 30, textY, ">", 19, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 0.55)
             end
         end
     end
