@@ -646,7 +646,7 @@ Menu.Categories = {
         { name = "Self", items = {
             { name = "", isSeparator = true, separatorText = "Health" },
             { name = "Revive", type = "action" },
-            { name = "", isSeparator = true, separatorText = "other" },
+            { name = "", isSeparator = true, separatorText = "Other" },
             { name = "TP all vehicle to me", type = "action" },
             { name = "Detach All Entitys", type = "action" },
             { name = "Solo Session", type = "toggle", value = false },
@@ -723,7 +723,7 @@ Menu.Categories = {
             { name = "Clear All Attached", type = "action" },
             { name = "Delete All Tubes", type = "action" },
             
-            { name = "", isSeparator = true, separatorText = "attach" },
+            { name = "", isSeparator = true, separatorText = "Attach Animations" },
             { name = "Twerk", type = "toggle", value = false },
             { name = "Baise", type = "toggle", value = false },
             { name = "Branlette", type = "toggle", value = false },
@@ -747,7 +747,7 @@ Menu.Categories = {
             { name = "Remove Tires", type = "action" },
             { name = "Give", type = "selector", options = {"Vehicle", "Ramp", "Wall", "Wall 2"}, selected = 1 }
         }},
-        { name = "all", items = {
+        { name = "Everyone", items = {
             { name = "Launch All", type = "action" }
         }}
     }},
@@ -770,7 +770,7 @@ Menu.Categories = {
             { name = "No Spread", type = "toggle", value = false},
             { name = "No Reload", type = "toggle", value = false },
             { name = "Give Ammo", type = "action" },
-            { name = "", isSeparator = true, separatorText = "attachments" },
+            { name = "", isSeparator = true, separatorText = "Attachments" },
             { name = "Give All Attachment", type = "action" },
             { name = "Give Suppressor", type = "action" },
             { name = "Give Flashlight", type = "action" },
@@ -804,7 +804,7 @@ Menu.Categories = {
             { name = "FOV Warp", type = "toggle", value = false, onClick = function(val) Menu.FOVWarp = val end },
             { name = "Warp when u press W", type = "toggle", value = false, onClick = function(val) Menu.WarpPressW = val end },
             { name = "Throw From Vehicle", type = "toggle", value = false },
-            { name = "", isSeparator = true, separatorText = "performance" },
+            { name = "", isSeparator = true, separatorText = "Performance" },
             { name = "Max Upgrade", type = "action" },
             { name = "Repair Vehicle", type = "action" },
             { name = "Flip Vehicle", type = "action" },
