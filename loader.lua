@@ -67,9 +67,7 @@ LibraryCode = string.gsub(
             end]]
 )
 
--- ============================================
--- PATCH: Chevron now uses image icon (embedded in library.lua)
--- ============================================
+-- Chevron now uses image icon (embedded directly in library.lua)
 
 -- ============================================
 -- PATCH: Footer text + centered logo image
