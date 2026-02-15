@@ -297,7 +297,7 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
 
     local barY = startY
     local barH = visibleHeight
-    local arrowH = math.floor(12 * scale)
+    local arrowH = math.floor(16 * scale)
     local trackY = barY + arrowH + 1
     local trackH = barH - (arrowH * 2) - 2
     if trackH < 10 then return end
@@ -316,8 +316,8 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
     end
 
     if Susano and Susano.DrawImage then
-        local iconSz = scrollbarWidth - 2
-        local iconX = scrollbarX + 1
+        local iconSz = scrollbarWidth
+        local iconX = scrollbarX
         local arrowUpTex = Menu.IconTextures and Menu.IconTextures["_arrowUp"]
         if arrowUpTex and arrowUpTex > 0 then
             Susano.DrawImage(arrowUpTex, iconX, barY + math.floor((arrowH - iconSz) / 2), iconSz, iconSz, 1, 1, 1, 0.75, 0)
@@ -1016,8 +1016,8 @@ function Menu.DrawCategories()
             local textY = itemY + itemHeight / 2 - 8
             Menu.DrawText(textX, textY, category.name, 19, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
 
-            local _chevSz = math.floor(16 * (Menu.Scale or 1.0))
-            local _chevX = x + width - _chevSz - 18
+            local _chevSz = math.floor(20 * (Menu.Scale or 1.0))
+            local _chevX = x + width - _chevSz - 16
             local _chevY = itemY + math.floor((itemHeight - _chevSz) / 2)
             local _chevTex = Menu.IconTextures and Menu.IconTextures["_chevron"]
             if _chevTex and _chevTex > 0 and Susano and Susano.DrawImage then
