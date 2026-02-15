@@ -677,7 +677,7 @@ Menu.Categories = {
             { name = "Copy Appearance", type = "action" },
             
             { name = "", isSeparator = true, separatorText = "Attacks" },
-            { name = "Ban Player (test)", type = "toggle", value = false, risk = true},
+            { name = "Ban Player [BETA]", type = "toggle", value = false, risk = true},
             { name = "Shoot Player", type = "action", risk = true},
             { name = "Ragdoll", type = "action"},
             { name = "Attach Player", type = "toggle", value = false, onClick = function(val)
@@ -727,7 +727,7 @@ Menu.Categories = {
             { name = "Twerk", type = "toggle", value = false },
             { name = "Baise", type = "toggle", value = false },
             { name = "Branlette", type = "toggle", value = false },
-            { name = "Piggyback", type = "toggle", value = false }
+            { name = "PiggyBack", type = "toggle", value = false }
         }},
         { name = "Vehicle", items = {
             { name = "", isSeparator = true, separatorText = "Bugs" },
@@ -771,7 +771,7 @@ Menu.Categories = {
             { name = "No Reload", type = "toggle", value = false },
             { name = "Give Ammo", type = "action" },
             { name = "", isSeparator = true, separatorText = "attachments" },
-            { name = "Give all Attachment", type = "action" },
+            { name = "Give All Attachment", type = "action" },
             { name = "Give Suppressor", type = "action" },
             { name = "Give Flashlight", type = "action" },
             { name = "Give Grip", type = "action" },
