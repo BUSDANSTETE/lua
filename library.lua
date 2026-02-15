@@ -72,7 +72,7 @@ end
 
 Menu.Banner = {
     enabled = true,
-    imageUrl = "https://i.imgur.com/0g8YPHh.png",
+    imageUrl = "https://i.imgur.com/3HLMxX5.png",
     height = 100
 }
 
@@ -123,8 +123,8 @@ function Menu.LoadBannerTexture(url)
 end
 
 Menu.Colors = {
-    HeaderPink = { r = 17, g = 42, b = 84 },
-    SelectedBg = { r = 17, g = 42, b = 84 },
+    HeaderPink = { r = 75, g = 178, b = 211 },
+    SelectedBg = { r = 75, g = 178, b = 211 },
     TextWhite = { r = 255, g = 255, b = 255 },
     BackgroundDark = { r = 0, g = 0, b = 0 },
     FooterBlack = { r = 0, g = 0, b = 0 }
@@ -132,25 +132,25 @@ Menu.Colors = {
 
 function Menu.ApplyTheme(themeName)
     if themeName == "Blue" then
-        Menu.Colors.HeaderPink = { r = 17, g = 42, b = 84 }
-        Menu.Colors.SelectedBg = { r = 17, g = 42, b = 84 }
-        Menu.Banner.imageUrl = "https://i.imgur.com/0g8YPHh.png"
+        Menu.Colors.HeaderPink = { r = 75, g = 178, b = 211 }
+        Menu.Colors.SelectedBg = { r = 75, g = 178, b = 211 }
+        Menu.Banner.imageUrl = "https://i.imgur.com/3HLMxX5.png"
     elseif themeName == "Green" then
         Menu.Colors.HeaderPink = { r = 76, g = 143, b = 88 }
         Menu.Colors.SelectedBg = { r = 76, g = 143, b = 88 }
-        Menu.Banner.imageUrl = "https://i.imgur.com/0g8YPHh.png"
+        Menu.Banner.imageUrl = "https://i.imgur.com/3HLMxX5.png"
     elseif themeName == "Red" then
         Menu.Colors.HeaderPink = { r = 211, g = 64, b = 60 }
         Menu.Colors.SelectedBg = { r = 211, g = 64, b = 60 }
-        Menu.Banner.imageUrl = "https://i.imgur.com/0g8YPHh.png"
+        Menu.Banner.imageUrl = "https://i.imgur.com/3HLMxX5.png"
     elseif themeName == "Purple" then
         Menu.Colors.HeaderPink = { r = 91, g = 55, b = 131 }
         Menu.Colors.SelectedBg = { r = 91, g = 55, b = 131 }
-        Menu.Banner.imageUrl = "https://i.imgur.com/0g8YPHh.png"
+        Menu.Banner.imageUrl = "https://i.imgur.com/3HLMxX5.png"
     else
         Menu.Colors.HeaderPink = { r = 255, g = 20, b = 147 }
         Menu.Colors.SelectedBg = { r = 255, g = 20, b = 147 }
-        Menu.Banner.imageUrl = "https://i.imgur.com/0g8YPHh.png"
+        Menu.Banner.imageUrl = "https://i.imgur.com/3HLMxX5.png"
     end
 
     if Menu.Banner.enabled and Menu.Banner.imageUrl then
@@ -2610,4 +2610,3 @@ end
 
 
 return Menu
-
