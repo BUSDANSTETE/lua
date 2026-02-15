@@ -171,7 +171,7 @@ Menu.Position = {
     mainMenuSpacing = 5,
     footerRadius = 4,
     itemRadius = 4,
-    scrollbarWidth = 7,
+    scrollbarWidth = 12,
     scrollbarPadding = 5,
     headerRadius = 6
 }
@@ -291,7 +291,7 @@ function Menu.DrawHeader()
 end
 
 function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems, isMainMenu, menuWidth)
-    if totalItems < 1 then
+    if totalItems < 2 then
         return
     end
 
@@ -308,9 +308,9 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
     local barH = visibleHeight
 
     -- Fleches integrees
-    local arrowH = math.floor(10 * scale)
-    local trackY = barY + arrowH
-    local trackH = barH - (arrowH * 2)
+    local arrowH = math.floor(12 * scale)
+    local trackY = barY + arrowH + 1
+    local trackH = barH - (arrowH * 2) - 2
 
     if trackH < 10 then return end
 
@@ -318,45 +318,51 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
     local bgG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
     local bgB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
 
-    -- Barre continue
     local barRadius = scrollbarWidth / 2
+
+    -- Barre exterieure (outline gris Korium)
     if Susano and Susano.DrawRectFilled then
-        Susano.DrawRectFilled(scrollbarX, barY, scrollbarWidth, barH, 0.08, 0.08, 0.08, 0.90, barRadius)
+        Susano.DrawRectFilled(scrollbarX, barY, scrollbarWidth, barH, 0.216, 0.216, 0.216, 0.85, barRadius)
+        -- Barre interieure (fond sombre)
+        Susano.DrawRectFilled(scrollbarX + 1, barY + 1, scrollbarWidth - 2, barH - 2, 0.05, 0.05, 0.05, 0.92, barRadius)
     else
-        Menu.DrawRoundedRect(scrollbarX, barY, scrollbarWidth, barH, 20, 20, 20, 230, barRadius)
+        Menu.DrawRoundedRect(scrollbarX, barY, scrollbarWidth, barH, 55, 55, 55, 217, barRadius)
+        Menu.DrawRoundedRect(scrollbarX + 1, barY + 1, scrollbarWidth - 2, barH - 2, 13, 13, 13, 235, barRadius)
     end
 
     -- Icones fleches
     if Susano and Susano.DrawImage then
-        local iconSz = scrollbarWidth
-        local iconX = scrollbarX
+        local iconSz = scrollbarWidth - 2
+        local iconX = scrollbarX + 1
 
         local arrowUpTex = Menu.IconTextures and Menu.IconTextures["_arrowUp"]
         if arrowUpTex and arrowUpTex > 0 then
             local iconY = barY + math.floor((arrowH - iconSz) / 2)
-            Susano.DrawImage(arrowUpTex, iconX, iconY, iconSz, iconSz, 1, 1, 1, 0.7, 0)
+            Susano.DrawImage(arrowUpTex, iconX, iconY, iconSz, iconSz, 1, 1, 1, 0.75, 0)
         end
 
         local arrowDownTex = Menu.IconTextures and Menu.IconTextures["_arrowDown"]
         if arrowDownTex and arrowDownTex > 0 then
             local iconY = barY + barH - arrowH + math.floor((arrowH - iconSz) / 2)
-            Susano.DrawImage(arrowDownTex, iconX, iconY, iconSz, iconSz, 1, 1, 1, 0.7, 0)
+            Susano.DrawImage(arrowDownTex, iconX, iconY, iconSz, iconSz, 1, 1, 1, 0.75, 0)
         end
     end
 
-    -- Thumb
+    -- Index normalise 0..1 (progression pure, pas de visibleRatio)
     local adjustedIndex = selectedIndex
     if isMainMenu then
         adjustedIndex = selectedIndex - 1
     end
+    local progress = (adjustedIndex - 1) / math.max(1, totalItems - 1)
+    progress = math.max(0, math.min(1, progress))
 
-    local visibleRatio = math.min(1.0, visibleHeight / (totalItems * (Menu.Position.itemHeight * scale)))
-    local thumbHeight = math.max(trackH * 0.12, trackH * visibleRatio)
+    -- Thumb taille fixe (petit, style Korium)
+    local thumbHeight = math.max(trackH * 0.15, math.min(trackH * 0.25, math.floor(20 * scale)))
     local maxThumbY = trackY + trackH - thumbHeight
-    local thumbY = trackY + ((adjustedIndex - 1) / math.max(1, totalItems - 1)) * (trackH - thumbHeight)
+    local thumbY = trackY + progress * (trackH - thumbHeight)
     thumbY = math.max(trackY, math.min(maxThumbY, thumbY))
 
-    -- Reset sync au changement de contexte
+    -- Reset sync au changement de contexte (cat <-> items <-> tabs)
     local ctx = isMainMenu and "cat" or ("items_" .. tostring(Menu.CurrentTab or 0))
     if Menu.scrollbarContext ~= ctx then
         Menu.scrollbarY = nil
@@ -371,18 +377,20 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
         Menu.scrollbarHeight = thumbHeight
     end
 
-    local smoothSpeed = 0.15
+    local smoothSpeed = 0.18
     Menu.scrollbarY = Menu.scrollbarY + (thumbY - Menu.scrollbarY) * smoothSpeed
     Menu.scrollbarHeight = Menu.scrollbarHeight + (thumbHeight - Menu.scrollbarHeight) * smoothSpeed
 
-    local thumbPad = 1
+    local thumbPad = 2
     local thumbW = scrollbarWidth - (thumbPad * 2)
     local thumbRadius = thumbW / 2
     if Susano and Susano.DrawRectFilled then
+        -- Glow
         Susano.DrawRectFilled(scrollbarX + thumbPad - 1, Menu.scrollbarY - 1,
             thumbW + 2, Menu.scrollbarHeight + 2,
             bgR * 0.4, bgG * 0.4, bgB * 0.4, 0.30,
             thumbRadius + 1)
+        -- Thumb
         Susano.DrawRectFilled(scrollbarX + thumbPad, Menu.scrollbarY,
             thumbW, Menu.scrollbarHeight,
             bgR, bgG, bgB, 1.0,
@@ -394,7 +402,6 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
             thumbRadius)
     end
 end
-
 function Menu.DrawTabs(category, x, startY, width, tabHeight)
     local scale = Menu.Scale or 1.0
     if not category or not category.hasTabs or not category.tabs then
