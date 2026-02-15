@@ -87,7 +87,7 @@ local Menu = chunk()
 -- Wraps Menu.DrawText to always draw a 1px dark shadow behind text
 -- This simulates bold/weight since Susano has no font-weight API
 Menu._OrigDrawText = Menu.DrawText
-Menu.BoldText = true -- set false to disable globally
+Menu.BoldText = false -- bold disabled for cleaner readability
 
 function Menu.DrawText(x, y, text, size_px, r, g, b, a)
     if Menu.BoldText and a and a > 0.1 then
