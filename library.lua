@@ -1070,8 +1070,15 @@ function Menu.DrawCategories()
             local textY = itemY + itemHeight / 2 - 8
             Menu.DrawText(textX, textY, category.name, 19, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
 
-            local chevronX = x + width - 22
-            Menu.DrawText(chevronX, textY, ">", 19, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 1.0)
+            local chevronSz = math.floor(12 * (Menu.Scale or 1.0))
+            local chevronX = x + width - chevronSz - 10
+            local chevronY = itemY + math.floor((itemHeight - chevronSz) / 2)
+            local chevronTex = Menu.IconTextures and Menu.IconTextures["_chevron"]
+            if chevronTex and chevronTex > 0 and Susano and Susano.DrawImage then
+                Susano.DrawImage(chevronTex, chevronX, chevronY, chevronSz, chevronSz, 1, 1, 1, 0.6, 0)
+            else
+                Menu.DrawText(x + width - 22, textY, ">", 19, Menu.Colors.TextWhite.r / 255.0, Menu.Colors.TextWhite.g / 255.0, Menu.Colors.TextWhite.b / 255.0, 0.6)
+            end
         end
     end
 
