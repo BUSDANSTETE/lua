@@ -385,10 +385,15 @@ function Menu.DrawScrollbar(x, startY, visibleHeight, selectedIndex, totalItems,
     local thumbW = scrollbarWidth - (thumbPad * 2)
     local thumbRadius = thumbW / 2
     if Susano and Susano.DrawRectFilled then
-        -- Glow
+        -- Bloom large subtil
+        Susano.DrawRectFilled(scrollbarX + thumbPad - 3, Menu.scrollbarY - 3,
+            thumbW + 6, Menu.scrollbarHeight + 6,
+            bgR * 0.3, bgG * 0.3, bgB * 0.3, 0.15,
+            thumbRadius + 3)
+        -- Glow proche
         Susano.DrawRectFilled(scrollbarX + thumbPad - 1, Menu.scrollbarY - 1,
             thumbW + 2, Menu.scrollbarHeight + 2,
-            bgR * 0.4, bgG * 0.4, bgB * 0.4, 0.30,
+            bgR * 0.5, bgG * 0.5, bgB * 0.5, 0.35,
             thumbRadius + 1)
         -- Thumb
         Susano.DrawRectFilled(scrollbarX + thumbPad, Menu.scrollbarY,
@@ -588,7 +593,7 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local baseG = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.g) and (Menu.Colors.SelectedBg.g / 255.0) or 0.0
         local baseB = (Menu.Colors.SelectedBg and Menu.Colors.SelectedBg.b) and (Menu.Colors.SelectedBg.b / 255.0) or 1.0
 
-        -- Barre de selection Korium avec glow
+        -- Barre de selection Korium avec glow lumineux
         local floatPad = 6
         local selX = x + floatPad
         local selW = width - (floatPad * 2)
@@ -596,12 +601,20 @@ function Menu.DrawItem(x, itemY, width, itemHeight, item, isSelected)
         local selY = drawY + math.floor((itemHeight - selH) / 2)
         local selRadius = 4
         if Susano and Susano.DrawRectFilled then
+            -- Bloom externe large (subtil)
+            local bloomPad = 8
+            Susano.DrawRectFilled(selX - bloomPad, selY - bloomPad, selW + bloomPad * 2, selH + bloomPad * 2, baseR, baseG, baseB, 0.04, selRadius + 6)
+            -- Glow moyen
             local glowPad = 4
             Susano.DrawRectFilled(selX - glowPad, selY - glowPad, selW + glowPad * 2, selH + glowPad * 2, baseR, baseG, baseB, 0.08, selRadius + 3)
+            -- Glow proche
             local glowPad2 = 2
-            Susano.DrawRectFilled(selX - glowPad2, selY - glowPad2, selW + glowPad2 * 2, selH + glowPad2 * 2, baseR, baseG, baseB, 0.12, selRadius + 1)
+            Susano.DrawRectFilled(selX - glowPad2, selY - glowPad2, selW + glowPad2 * 2, selH + glowPad2 * 2, baseR, baseG, baseB, 0.14, selRadius + 1)
+            -- Outline gris
             Susano.DrawRectFilled(selX, selY, selW, selH, 0.216, 0.216, 0.216, 0.98, selRadius)
+            -- Fill bleu
             Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.85, selRadius)
+            -- Gradient gauche renforce
             Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.5, selH - 2, baseR, baseG, baseB, 0.10, selRadius)
         else
             Menu.DrawRoundedRect(selX, selY, selW, selH, 55, 55, 55, 250, selRadius)
@@ -1024,7 +1037,7 @@ function Menu.DrawCategories()
                 local baseG = Menu.Colors.SelectedBg.g / 255.0
                 local baseB = Menu.Colors.SelectedBg.b / 255.0
 
-                -- Barre de selection Korium avec glow
+                -- Barre de selection Korium avec glow lumineux
                 local floatPad = 6
                 local selX = x + floatPad
                 local selW = width - (floatPad * 2)
@@ -1032,12 +1045,20 @@ function Menu.DrawCategories()
                 local selY = drawY + math.floor((itemHeight - selH) / 2)
                 local selRadius = 4
                 if Susano and Susano.DrawRectFilled then
+                    -- Bloom externe large (subtil)
+                    local bloomPad = 8
+                    Susano.DrawRectFilled(selX - bloomPad, selY - bloomPad, selW + bloomPad * 2, selH + bloomPad * 2, baseR, baseG, baseB, 0.04, selRadius + 6)
+                    -- Glow moyen
                     local glowPad = 4
                     Susano.DrawRectFilled(selX - glowPad, selY - glowPad, selW + glowPad * 2, selH + glowPad * 2, baseR, baseG, baseB, 0.08, selRadius + 3)
+                    -- Glow proche
                     local glowPad2 = 2
-                    Susano.DrawRectFilled(selX - glowPad2, selY - glowPad2, selW + glowPad2 * 2, selH + glowPad2 * 2, baseR, baseG, baseB, 0.12, selRadius + 1)
+                    Susano.DrawRectFilled(selX - glowPad2, selY - glowPad2, selW + glowPad2 * 2, selH + glowPad2 * 2, baseR, baseG, baseB, 0.14, selRadius + 1)
+                    -- Outline gris
                     Susano.DrawRectFilled(selX, selY, selW, selH, 0.216, 0.216, 0.216, 0.98, selRadius)
+                    -- Fill bleu
                     Susano.DrawRectFilled(selX + 1, selY + 1, selW - 2, selH - 2, baseR, baseG, baseB, 0.85, selRadius)
+                    -- Gradient gauche renforce
                     Susano.DrawRectFilled(selX + 1, selY + 1, (selW - 2) * 0.5, selH - 2, baseR, baseG, baseB, 0.10, selRadius)
                 else
                     Menu.DrawRoundedRect(selX, selY, selW, selH, 55, 55, 55, 250, selRadius)
