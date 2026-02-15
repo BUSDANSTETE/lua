@@ -68,17 +68,8 @@ LibraryCode = string.gsub(
 )
 
 -- ============================================
--- PATCH: Chevron >> replaced by clean >
+-- PATCH: Chevron now uses image icon (embedded in library.lua)
 -- ============================================
-LibraryCode = string.gsub(
-    LibraryCode,
-    'local chevronX = x %+ width %- 22\n            Menu%.DrawText%(chevronX, textY, ">", 19, Menu%.Colors%.TextWhite%.r / 255%.0, Menu%.Colors%.TextWhite%.g / 255%.0, Menu%.Colors%.TextWhite%.b / 255%.0, 1%.0%)',
-    [[local chevronX = x + width - 36
-            local _wr2 = Menu.Colors.TextWhite.r / 255.0
-            local _wg2 = Menu.Colors.TextWhite.g / 255.0
-            local _wb2 = Menu.Colors.TextWhite.b / 255.0
-            Menu.DrawText(chevronX, textY, ">>", 16, _wr2, _wg2, _wb2, 0.55)]]
-)
 
 -- ============================================
 -- PATCH: Footer text + centered logo image
@@ -121,6 +112,7 @@ Menu.FooterLogoUrl = "https://i.imgur.com/jY5oSqw.png" -- <<< REPLACE with your 
 
 Menu.ArrowUpUrl = "https://i.imgur.com/CefzPfK.png"
 Menu.ArrowDownUrl = "https://i.imgur.com/cEtkALw.png"
+Menu.ChevronUrl = "https://i.imgur.com/qPVyVP3.png"
 
 -- Load a single icon texture from URL, store in Menu.IconTextures[name]
 function Menu.LoadIconTexture(name, url)
@@ -180,6 +172,9 @@ function Menu.LoadAllIcons()
     end
     if Menu.ArrowDownUrl and Menu.ArrowDownUrl ~= "" then
         Menu.LoadIconTexture("_arrowDown", Menu.ArrowDownUrl)
+    end
+    if Menu.ChevronUrl and Menu.ChevronUrl ~= "" then
+        Menu.LoadIconTexture("_chevron", Menu.ChevronUrl)
     end
 end
 
