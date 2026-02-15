@@ -677,8 +677,8 @@ Menu.Categories = {
             { name = "Copy Appearance", type = "action" },
             
             { name = "", isSeparator = true, separatorText = "Attacks" },
-            { name = "Ban Player (test)", type = "toggle", value = false },
-            { name = "Shoot Player", type = "action"},
+            { name = "Ban Player (test)", type = "toggle", value = false, risk = true},
+            { name = "Shoot Player", type = "action", risk = true},
             { name = "Ragdoll", type = "action"},
             { name = "Attach Player", type = "toggle", value = false, onClick = function(val)
                 local target = Menu.SelectedPlayer
@@ -724,10 +724,10 @@ Menu.Categories = {
             { name = "Delete All Tubes", type = "action" },
             
             { name = "", isSeparator = true, separatorText = "attach" },
-            { name = "twerk", type = "toggle", value = false },
-            { name = "baise le", type = "toggle", value = false },
-            { name = "branlette", type = "toggle", value = false },
-            { name = "piggyback", type = "toggle", value = false }
+            { name = "Twerk", type = "toggle", value = false },
+            { name = "Baise", type = "toggle", value = false },
+            { name = "Branlette", type = "toggle", value = false },
+            { name = "Piggyback", type = "toggle", value = false }
         }},
         { name = "Vehicle", items = {
             { name = "", isSeparator = true, separatorText = "Bugs" },
@@ -744,7 +744,7 @@ Menu.Categories = {
             { name = "NPC Drive", type = "action" },
             { name = "Delete Vehicle", type = "action" },
             { name = "Kick Vehicle", type = "selector", options = {"V1", "V2"}, selected = 1 },
-            { name = "remove all tires", type = "action" },
+            { name = "Remove Tires", type = "action" },
             { name = "Give", type = "selector", options = {"Vehicle", "Ramp", "Wall", "Wall 2"}, selected = 1 }
         }},
         { name = "all", items = {
@@ -771,31 +771,31 @@ Menu.Categories = {
             { name = "No Reload", type = "toggle", value = false },
             { name = "Give Ammo", type = "action" },
             { name = "", isSeparator = true, separatorText = "attachments" },
-            { name = "Give all attachment", type = "action" },
-            { name = "Give suppressor", type = "action" },
-            { name = "Give flashlight", type = "action" },
-            { name = "Give grip", type = "action" },
-            { name = "Give scope", type = "action" }
+            { name = "Give all Attachment", type = "action" },
+            { name = "Give Suppressor", type = "action" },
+            { name = "Give Flashlight", type = "action" },
+            { name = "Give Grip", type = "action" },
+            { name = "Give Scope", type = "action" }
         }},
         { name = "Spawn", items = {
             { name = "Protect Weapon", type = "toggle", value = false },
-            { name = "give weapon_aa", type = "action" },
-            { name = "give weapon_caveira", type = "action" },
-            { name = "give weapon_SCOM", type = "action" },
-            { name = "give weapon_mcx", type = "action" },
-            { name = "give weapon_grau", type = "action" },
-            { name = "give weapon_midasgun", type = "action" },
-            { name = "give weapon_hackingdevice", type = "action" },
-            { name = "give weapon_akorus", type = "action" },
-            { name = "give WEAPON_MIDGARD", type = "action" },
-            { name = "give weapon_chainsaw", type = "action" },
-            { name = "give weapon_m4a1smr", type = "action" },
-            { name = "give weapon_aks74u", type = "action" },
-            { name = "give WEAPON_ASSAULTXMAS", type = "action" },
-            { name = "give weapon_scar17", type = "action" },
-            { name = "give weapon_blacksniper", type = "action" },
-            { name = "give weapon_hkhall", type = "action" },
-            { name = "give weapon_hk_ump", type = "action" }
+            { name = "weapon_aa", type = "action" },
+            { name = "weapon_caveira", type = "action" },
+            { name = "weapon_SCOM", type = "action" },
+            { name = "weapon_mcx", type = "action" },
+            { name = "weapon_grau", type = "action" },
+            { name = "weapon_midasgun", type = "action" },
+            { name = "weapon_hackingdevice", type = "action" },
+            { name = "weapon_akorus", type = "action" },
+            { name = "WEAPON_MIDGARD", type = "action" },
+            { name = "weapon_chainsaw", type = "action" },
+            { name = "weapon_m4a1smr", type = "action" },
+            { name = "weapon_aks74u", type = "action" },
+            { name = "wepaon_ASSAULTXMAS", type = "action" },
+            { name = "weapon_scar17", type = "action" },
+            { name = "weapon_blacksniper", type = "action" },
+            { name = "weapon_hkhall", type = "action" },
+            { name = "weapon_hk_ump", type = "action" }
         }}
     }},
     { name = "Vehicle", iconUrl = "https://i.imgur.com/DkzEgPb.png", icon = "ðŸš—", hasTabs = true, tabs = {
@@ -982,7 +982,7 @@ Menu.Categories = {
         { name = "Exploits", items = {
             { name = "", isSeparator = true, separatorText = "Server" },
             { name = "Staff Mode", type = "toggle", value = false, dynasty = true},
-            { name = "Disable Weapon Damage", type = "toggle", value = false },
+            { name = "Disable Weapon Damage", type = "toggle", value = false, dynasty = true},
             { name = "Menu Staff", type = "action", dynasty = true },
             { name = "Revive", type = "action", dynasty = true },
             { name = "", isSeparator = true, separatorText = "Teleport" },
