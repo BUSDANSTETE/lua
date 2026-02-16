@@ -655,9 +655,6 @@ Menu.Categories = {
         }},
         { name = "Wardrobe", items = {
             { name = "Random Outfit", type = "action" },
-            { name = "Save Outfit", type = "action" },
-            { name = "Load Outfit", type = "action" },
-            { name = "Outfit", type = "selector", options = {"bnz outfit", "Staff Outfit", "Hitler Outfit", "jy", "w outfit"}, selected = 1 },
             { name = "", isSeparator = true, separatorText = "Clothing" },
             { name = "Hat", type = "selector", options = {}, selected = 1 },
             { name = "Mask", type = "selector", options = {}, selected = 1 },
@@ -1008,14 +1005,6 @@ Menu.Categories = {
             { name = "Menu Theme", type = "selector", options = {"Blue", "Purple", "Pink", "Red", "Green"}, selected = 5 },
             { name = "Flocon", type = "toggle", value = true },
             { name = "Scroll Bar Position", type = "selector", options = {"Left", "Right"}, selected = 1 }
-        }},
-        { name = "Keybinds", items = {
-            { name = "Change Menu Keybind", type = "action" },
-            { name = "Show Menu Keybinds", type = "toggle", value = false }
-        }},
-        { name = "Config", items = {
-            { name = "Create Config", type = "action" },
-            { name = "Load Config", type = "action" }
         }}
     }}
 }
