@@ -2045,90 +2045,62 @@ Menu.OnRender = function()
 end
 
 -- ============================================
--- PLAYER INFO PANEL (adapted from Nebula)
+-- PLAYER INFO PANEL (Draw API, style = menu)
 -- ============================================
 
+local _weaponNameCache = {}
 local function getWeaponName(weaponHash)
-    local weaponNames = {
-        [GetHashKey("WEAPON_RAILGUN")] = "Railgun",
-        [GetHashKey("WEAPON_ASSAULTSHOTGUN")] = "Assault Shotgun",
-        [GetHashKey("WEAPON_SMG")] = "SMG",
-        [GetHashKey("WEAPON_FIREWORK")] = "Firework Launcher",
-        [GetHashKey("WEAPON_MOLOTOV")] = "Molotov",
-        [GetHashKey("WEAPON_APPISTOL")] = "AP Pistol",
-        [GetHashKey("WEAPON_STUNGUN")] = "Stun Gun",
-        [GetHashKey("WEAPON_ASSAULTRIFLE")] = "Assault Rifle",
-        [GetHashKey("WEAPON_ASSAULTRIFLE_MK2")] = "Assault Rifle MK2",
-        [GetHashKey("WEAPON_ASSAULTSMG")] = "Assault SMG",
-        [GetHashKey("WEAPON_AUTOSHOTGUN")] = "Auto Shotgun",
-        [GetHashKey("WEAPON_BULLPUPRIFLE")] = "Bullpup Rifle",
-        [GetHashKey("WEAPON_BULLPUPRIFLE_MK2")] = "Bullpup Rifle MK2",
-        [GetHashKey("WEAPON_BULLPUPSHOTGUN")] = "Bullpup Shotgun",
-        [GetHashKey("WEAPON_CARBINERIFLE")] = "Carbine Rifle",
-        [GetHashKey("WEAPON_CARBINERIFLE_MK2")] = "Carbine Rifle MK2",
-        [GetHashKey("WEAPON_COMBATMG")] = "Combat MG",
-        [GetHashKey("WEAPON_COMBATMG_MK2")] = "Combat MG MK2",
-        [GetHashKey("WEAPON_COMBATPDW")] = "Combat PDW",
-        [GetHashKey("WEAPON_COMBATPISTOL")] = "Combat Pistol",
-        [GetHashKey("WEAPON_COMPACTLAUNCHER")] = "Compact Launcher",
-        [GetHashKey("WEAPON_COMPACTRIFLE")] = "Compact Rifle",
-        [GetHashKey("WEAPON_DBSHOTGUN")] = "DB Shotgun",
-        [GetHashKey("WEAPON_DOUBLEACTION")] = "Double Action",
-        [GetHashKey("WEAPON_GRENADE")] = "Grenade",
-        [GetHashKey("WEAPON_GUSENBERG")] = "Gusenberg",
-        [GetHashKey("WEAPON_HEAVYPISTOL")] = "Heavy Pistol",
-        [GetHashKey("WEAPON_HEAVYSHOTGUN")] = "Heavy Shotgun",
-        [GetHashKey("WEAPON_HEAVYSNIPER")] = "Heavy Sniper",
-        [GetHashKey("WEAPON_HEAVYSNIPER_MK2")] = "Heavy Sniper MK2",
-        [GetHashKey("WEAPON_HOMINGLAUNCHER")] = "Homing Launcher",
-        [GetHashKey("WEAPON_MACHINEPISTOL")] = "Machine Pistol",
-        [GetHashKey("WEAPON_MARKSMANPISTOL")] = "Marksman Pistol",
-        [GetHashKey("WEAPON_MARKSMANRIFLE")] = "Marksman Rifle",
-        [GetHashKey("WEAPON_MARKSMANRIFLE_MK2")] = "Marksman Rifle MK2",
-        [GetHashKey("WEAPON_MG")] = "MG",
-        [GetHashKey("WEAPON_MICROSMG")] = "Micro SMG",
-        [GetHashKey("WEAPON_MINIGUN")] = "Minigun",
-        [GetHashKey("WEAPON_MINISMG")] = "Mini SMG",
-        [GetHashKey("WEAPON_MUSKET")] = "Musket",
-        [GetHashKey("WEAPON_NAVYREVOLVER")] = "Navy Revolver",
-        [GetHashKey("WEAPON_PISTOL")] = "Pistol",
-        [GetHashKey("WEAPON_PISTOL50")] = "Pistol .50",
-        [GetHashKey("WEAPON_PISTOL_MK2")] = "Pistol MK2",
-        [GetHashKey("WEAPON_PUMPSHOTGUN")] = "Pump Shotgun",
-        [GetHashKey("WEAPON_PUMPSHOTGUN_MK2")] = "Pump Shotgun MK2",
-        [GetHashKey("WEAPON_RAYCARBINE")] = "Ray Carbine",
-        [GetHashKey("WEAPON_RAYMINIGUN")] = "Ray Minigun",
-        [GetHashKey("WEAPON_RAYPISTOL")] = "Ray Pistol",
-        [GetHashKey("WEAPON_REVOLVER")] = "Revolver",
-        [GetHashKey("WEAPON_REVOLVER_MK2")] = "Revolver MK2",
-        [GetHashKey("WEAPON_SAWNOFFSHOTGUN")] = "Sawed-Off",
-        [GetHashKey("WEAPON_RPG")] = "RPG",
-        [GetHashKey("WEAPON_SMG_MK2")] = "SMG MK2",
-        [GetHashKey("WEAPON_SNIPERRIFLE")] = "Sniper Rifle",
-        [GetHashKey("WEAPON_SNSPISTOL")] = "SNS Pistol",
-        [GetHashKey("WEAPON_SNSPISTOL_MK2")] = "SNS Pistol MK2",
-        [GetHashKey("WEAPON_SPECIALCARBINE")] = "Special Carbine",
-        [GetHashKey("WEAPON_SPECIALCARBINE_MK2")] = "Special Carbine MK2",
-        [GetHashKey("WEAPON_STICKYBOMB")] = "Sticky Bomb",
-        [GetHashKey("WEAPON_VINTAGEPISTOL")] = "Vintage Pistol",
-        [GetHashKey("WEAPON_SWITCHBLADE")] = "Switchblade",
-        [GetHashKey("WEAPON_NIGHTSTICK")] = "Nightstick",
-        [GetHashKey("WEAPON_KNIFE")] = "Knife",
-        [GetHashKey("WEAPON_BAT")] = "Bat",
-        [GetHashKey("WEAPON_HAMMER")] = "Hammer",
-        [GetHashKey("WEAPON_CROWBAR")] = "Crowbar",
-        [GetHashKey("WEAPON_WRENCH")] = "Wrench",
-        [GetHashKey("WEAPON_BATTLEAXE")] = "Battle Axe",
-        [GetHashKey("WEAPON_DAGGER")] = "Dagger",
-        [GetHashKey("WEAPON_HATCHET")] = "Hatchet",
-        [GetHashKey("WEAPON_MACHETE")] = "Machete",
-        [GetHashKey("WEAPON_FLASHLIGHT")] = "Flashlight",
-        [GetHashKey("WEAPON_UNARMED")] = "Unarmed"
+    if _weaponNameCache[weaponHash] then return _weaponNameCache[weaponHash] end
+    local map = {
+        ["WEAPON_RAILGUN"] = "Railgun", ["WEAPON_ASSAULTSHOTGUN"] = "Assault Shotgun",
+        ["WEAPON_SMG"] = "SMG", ["WEAPON_FIREWORK"] = "Firework Launcher",
+        ["WEAPON_MOLOTOV"] = "Molotov", ["WEAPON_APPISTOL"] = "AP Pistol",
+        ["WEAPON_STUNGUN"] = "Stun Gun", ["WEAPON_ASSAULTRIFLE"] = "Assault Rifle",
+        ["WEAPON_ASSAULTRIFLE_MK2"] = "Assault Rifle MK2", ["WEAPON_ASSAULTSMG"] = "Assault SMG",
+        ["WEAPON_AUTOSHOTGUN"] = "Auto Shotgun", ["WEAPON_BULLPUPRIFLE"] = "Bullpup Rifle",
+        ["WEAPON_BULLPUPRIFLE_MK2"] = "Bullpup Rifle MK2", ["WEAPON_BULLPUPSHOTGUN"] = "Bullpup Shotgun",
+        ["WEAPON_CARBINERIFLE"] = "Carbine Rifle", ["WEAPON_CARBINERIFLE_MK2"] = "Carbine Rifle MK2",
+        ["WEAPON_COMBATMG"] = "Combat MG", ["WEAPON_COMBATMG_MK2"] = "Combat MG MK2",
+        ["WEAPON_COMBATPDW"] = "Combat PDW", ["WEAPON_COMBATPISTOL"] = "Combat Pistol",
+        ["WEAPON_COMPACTLAUNCHER"] = "Compact Launcher", ["WEAPON_COMPACTRIFLE"] = "Compact Rifle",
+        ["WEAPON_DBSHOTGUN"] = "DB Shotgun", ["WEAPON_DOUBLEACTION"] = "Double Action",
+        ["WEAPON_GRENADE"] = "Grenade", ["WEAPON_GUSENBERG"] = "Gusenberg",
+        ["WEAPON_HEAVYPISTOL"] = "Heavy Pistol", ["WEAPON_HEAVYSHOTGUN"] = "Heavy Shotgun",
+        ["WEAPON_HEAVYSNIPER"] = "Heavy Sniper", ["WEAPON_HEAVYSNIPER_MK2"] = "Heavy Sniper MK2",
+        ["WEAPON_HOMINGLAUNCHER"] = "Homing Launcher", ["WEAPON_MACHINEPISTOL"] = "Machine Pistol",
+        ["WEAPON_MARKSMANPISTOL"] = "Marksman Pistol", ["WEAPON_MARKSMANRIFLE"] = "Marksman Rifle",
+        ["WEAPON_MARKSMANRIFLE_MK2"] = "Marksman Rifle MK2", ["WEAPON_MG"] = "MG",
+        ["WEAPON_MICROSMG"] = "Micro SMG", ["WEAPON_MINIGUN"] = "Minigun",
+        ["WEAPON_MINISMG"] = "Mini SMG", ["WEAPON_MUSKET"] = "Musket",
+        ["WEAPON_NAVYREVOLVER"] = "Navy Revolver", ["WEAPON_PISTOL"] = "Pistol",
+        ["WEAPON_PISTOL50"] = "Pistol .50", ["WEAPON_PISTOL_MK2"] = "Pistol MK2",
+        ["WEAPON_PUMPSHOTGUN"] = "Pump Shotgun", ["WEAPON_PUMPSHOTGUN_MK2"] = "Pump Shotgun MK2",
+        ["WEAPON_RAYCARBINE"] = "Ray Carbine", ["WEAPON_RAYMINIGUN"] = "Ray Minigun",
+        ["WEAPON_RAYPISTOL"] = "Ray Pistol", ["WEAPON_REVOLVER"] = "Revolver",
+        ["WEAPON_REVOLVER_MK2"] = "Revolver MK2", ["WEAPON_SAWNOFFSHOTGUN"] = "Sawed-Off",
+        ["WEAPON_RPG"] = "RPG", ["WEAPON_SMG_MK2"] = "SMG MK2",
+        ["WEAPON_SNIPERRIFLE"] = "Sniper Rifle", ["WEAPON_SNSPISTOL"] = "SNS Pistol",
+        ["WEAPON_SNSPISTOL_MK2"] = "SNS Pistol MK2", ["WEAPON_SPECIALCARBINE"] = "Special Carbine",
+        ["WEAPON_SPECIALCARBINE_MK2"] = "Special Carbine MK2", ["WEAPON_STICKYBOMB"] = "Sticky Bomb",
+        ["WEAPON_VINTAGEPISTOL"] = "Vintage Pistol", ["WEAPON_SWITCHBLADE"] = "Switchblade",
+        ["WEAPON_NIGHTSTICK"] = "Nightstick", ["WEAPON_KNIFE"] = "Knife",
+        ["WEAPON_BAT"] = "Bat", ["WEAPON_HAMMER"] = "Hammer", ["WEAPON_CROWBAR"] = "Crowbar",
+        ["WEAPON_WRENCH"] = "Wrench", ["WEAPON_BATTLEAXE"] = "Battle Axe",
+        ["WEAPON_DAGGER"] = "Dagger", ["WEAPON_HATCHET"] = "Hatchet",
+        ["WEAPON_MACHETE"] = "Machete", ["WEAPON_FLASHLIGHT"] = "Flashlight",
+        ["WEAPON_PIPEBOMB"] = "Pipe Bomb", ["WEAPON_PROXMINE"] = "Proximity Mine",
+        ["WEAPON_BZGAS"] = "BZ Gas", ["WEAPON_SMOKEGRENADE"] = "Smoke Grenade",
+        ["WEAPON_SNOWBALL"] = "Snowball", ["WEAPON_FLARE"] = "Flare",
+        ["WEAPON_FLAREGUN"] = "Flare Gun", ["WEAPON_POOLCUE"] = "Pool Cue",
+        ["WEAPON_FIREEXTINGUISHER"] = "Extinguisher",
     }
-    return weaponNames[weaponHash] or "Unknown"
+    for name, label in pairs(map) do
+        local h = GetHashKey(name)
+        _weaponNameCache[h] = label
+    end
+    return _weaponNameCache[weaponHash] or "Unknown"
 end
 
--- Resolve selected player server ID to local ID
 local function ResolveLocalId(serverId)
     for _, p in ipairs(GetActivePlayers()) do
         if GetPlayerServerId(p) == serverId then
@@ -2138,7 +2110,7 @@ local function ResolveLocalId(serverId)
     return nil
 end
 
--- Collect real-time info for the selected player
+-- Collect all relevant player info
 function Menu.GetSelectedPlayerInfo()
     local serverId = Menu.SelectedPlayer
     if not serverId then return nil end
@@ -2160,27 +2132,47 @@ function Menu.GetSelectedPlayerInfo()
     local vehicle = GetVehiclePedIsIn(playerPed, false)
     local vehicleName = "On Foot"
     local speed = 0
+    local vehPlate = ""
+    local vehHealth = 0
+    local vehMaxHealth = 0
+    local inVehicle = false
     if vehicle ~= 0 then
-        vehicleName = GetDisplayNameFromVehicleModel(GetEntityModel(vehicle))
-        speed = math.floor(GetEntitySpeed(vehicle) * 3.6) -- km/h
+        inVehicle = true
+        vehicleName = GetDisplayNameFromVehicleModel(GetEntityModel(vehicle)) or "Unknown"
+        speed = math.floor(GetEntitySpeed(vehicle) * 3.6)
+        vehPlate = GetVehicleNumberPlateText(vehicle) or ""
+        vehHealth = GetEntityHealth(vehicle)
+        vehMaxHealth = GetEntityMaxHealth(vehicle)
     end
 
-    -- Distance
+    -- Coords / Distance / Heading
     local myCoords = GetEntityCoords(PlayerPedId())
     local targetCoords = GetEntityCoords(playerPed)
     local distance = math.floor(#(myCoords - targetCoords))
+    local heading = math.floor(GetEntityHeading(playerPed))
 
     -- Health / Armor
     local health = GetEntityHealth(playerPed)
     local maxHealth = GetEntityMaxHealth(playerPed)
     local armor = GetPedArmour(playerPed)
-
-    -- Alive
     local isAlive = health > 0
+
+    -- States
+    local isAiming = IsPlayerFreeAiming(localId)
+    local isInCover = IsPedInCover(playerPed, false)
+    local isSprinting = IsPedSprinting(playerPed)
+    local isSwimming = IsPedSwimming(playerPed)
+    local isFalling = IsPedFalling(playerPed)
+    local isRagdoll = IsPedRagdoll(playerPed)
+    local isInvisible = not IsEntityVisible(playerPed)
+
+    -- God mode detection (invincible flag)
+    local isGodmode = GetPlayerInvincible(localId)
 
     return {
         name = GetPlayerName(localId) or "Unknown",
         serverId = serverId,
+        localId = localId,
         health = health,
         maxHealth = maxHealth,
         armor = armor,
@@ -2188,123 +2180,266 @@ function Menu.GetSelectedPlayerInfo()
         vehicle = vehicleName,
         speed = speed,
         distance = distance,
-        isAlive = isAlive
+        heading = heading,
+        coords = targetCoords,
+        isAlive = isAlive,
+        inVehicle = inVehicle,
+        vehPlate = vehPlate,
+        vehHealth = vehHealth,
+        vehMaxHealth = vehMaxHealth,
+        isAiming = isAiming,
+        isInCover = isInCover,
+        isSprinting = isSprinting,
+        isSwimming = isSwimming,
+        isFalling = isFalling,
+        isRagdoll = isRagdoll,
+        isInvisible = isInvisible,
+        isGodmode = isGodmode
     }
 end
 
--- Draw the info panel to the right of the menu
+-- Utility: draw a rounded-rect panel matching menu style
+-- Outer border: 0.216 gray | Inner bg: 0.059 dark | Alpha: 0.98 | Radius: 6
+local function DrawPanelBackground(px, py, pw, ph, radius)
+    radius = radius or 6
+    if Susano and Susano.DrawRectFilled then
+        -- Outer border (same as menu header border)
+        Susano.DrawRectFilled(px, py, pw, ph, 0.216, 0.216, 0.216, 0.98, radius)
+        -- Inner fill (same as menu body)
+        Susano.DrawRectFilled(px + 1, py + 1, pw - 2, ph - 2, 0.059, 0.059, 0.059, 0.98, radius)
+    else
+        Menu.DrawRoundedRect(px, py, pw, ph, 55, 55, 55, 250, radius)
+        Menu.DrawRoundedRect(px + 1, py + 1, pw - 2, ph - 2, 15, 15, 15, 250, radius)
+    end
+end
+
+-- Utility: draw a health/armor style bar with rounded ends
+local function DrawInfoBar(bx, by, bw, bh, pct, fillR, fillG, fillB, label, radius)
+    radius = radius or 3
+    pct = math.max(0, math.min(1, pct))
+    -- Bar track
+    if Susano and Susano.DrawRectFilled then
+        Susano.DrawRectFilled(bx, by, bw, bh, 0.16, 0.16, 0.16, 0.9, radius)
+    else
+        Menu.DrawRect(bx, by, bw, bh, 40, 40, 40, 230)
+    end
+    -- Bar fill
+    if pct > 0 then
+        local fillW = math.max(radius * 2, math.floor(bw * pct))
+        if Susano and Susano.DrawRectFilled then
+            Susano.DrawRectFilled(bx, by, fillW, bh, fillR / 255, fillG / 255, fillB / 255, 0.95, radius)
+        else
+            Menu.DrawRect(bx, by, fillW, bh, fillR, fillG, fillB, 242)
+        end
+    end
+    -- Bar text
+    if label then
+        Menu.DrawText(bx + 5, by + 1, label, 11, 1.0, 1.0, 1.0, 0.95)
+    end
+end
+
+-- Draw section separator line
+local function DrawSectionSep(sx, sy, sw, text, scale, accent)
+    -- Dim line
+    if Susano and Susano.DrawRectFilled then
+        Susano.DrawRectFilled(sx, sy + 8 * scale, sw, 1, 0.25, 0.25, 0.25, 0.5, 0)
+    else
+        Menu.DrawRect(sx, sy + 8 * scale, sw, 1, 64, 64, 64, 128)
+    end
+    if text then
+        Menu.DrawText(sx, sy, text, 11, accent.r / 255, accent.g / 255, accent.b / 255, 0.8)
+    end
+    return sy + 18 * scale
+end
+
 function Menu.DrawPlayerInfoPanel()
     local info = Menu.GetSelectedPlayerInfo()
     if not info then return end
 
     local scale = Menu.Scale or 1.0
     local sp = Menu.GetScaledPosition()
+    local accent = Menu.Colors.SelectedBg or { r = 104, g = 168, b = 203 }
 
-    -- Panel position: right of menu with 10px gap
-    local panelX = sp.x + sp.width + 10
-    local panelW = 260 * scale
-    local lineH = 22 * scale
-    local padding = 10 * scale
-    local barH = 8 * scale
-    local fontSize = 14
+    -- Panel sizing
+    local gap = 12 * scale
+    local panelX = sp.x + sp.width + gap
+    local panelW = 310 * scale
+    local pad = 14 * scale
+    local rowH = 24 * scale
+    local barH = 14 * scale
+    local fontSize = 13
+    local headerFontSize = 16
 
-    -- Total rows: Header + Health bar + Armor bar + Weapon + Vehicle + Speed + Distance + Status = 8 visual blocks
-    -- Calculate total height
-    local headerH = 32 * scale
-    local rowCount = 6 -- weapon, vehicle, speed, distance, status, separator
-    local barsH = (barH + lineH) * 2 -- health bar + armor bar (label + bar each)
-    local panelH = headerH + barsH + (rowCount * lineH) + padding * 2
+    -- Content X boundaries
+    local cx = panelX + pad
+    local contentW = panelW - pad * 2
+    local labelW = 95 * scale
+    local valX = cx + labelW
+
+    -- Pre-calculate total height
+    -- Header(name+id) + separator + health bar + armor bar + separator
+    -- + weapon + distance + heading + coords + separator
+    -- + vehicle section (conditional) + separator + states + status
+    local h = pad
+    h = h + 28 * scale          -- header block (name + id)
+    h = h + 18 * scale          -- separator
+    h = h + rowH + barH + 4*scale   -- health label+bar
+    h = h + rowH + barH + 4*scale   -- armor label+bar
+    h = h + 18 * scale          -- separator
+    h = h + rowH * 4            -- weapon, distance, heading, coords
+    if info.inVehicle then
+        h = h + 18 * scale      -- separator
+        h = h + rowH * 3        -- vehicle, plate, speed
+        h = h + rowH + barH + 4*scale -- veh health bar
+    end
+    h = h + 18 * scale          -- separator
+    h = h + rowH * 2            -- state + status
+    h = h + pad
 
     local panelY = sp.y + sp.headerHeight + (sp.headerSpacing or 0)
 
-    -- Background
-    local bgR, bgG, bgB, bgA = 15 / 255, 15 / 255, 15 / 255, 0.92
+    -- === BACKGROUND (matches menu exactly) ===
+    DrawPanelBackground(panelX, panelY, panelW, h, 6)
+
+    -- === ACCENT LINE (top, 3px, theme color) ===
     if Susano and Susano.DrawRectFilled then
-        Susano.DrawRectFilled(panelX, panelY, panelW, panelH, bgR, bgG, bgB, bgA, 6)
+        Susano.DrawRectFilled(panelX + 6, panelY + 1, panelW - 12, 3 * scale, accent.r / 255, accent.g / 255, accent.b / 255, 0.9, 2)
     else
-        Menu.DrawRect(panelX, panelY, panelW, panelH, 15, 15, 15, 235)
+        Menu.DrawRect(panelX + 6, panelY + 1, panelW - 12, 3 * scale, accent.r, accent.g, accent.b, 230)
     end
 
-    -- Border accent line (top, uses theme color)
-    local accent = Menu.Colors.SelectedBg or { r = 104, g = 168, b = 203 }
-    Menu.DrawRect(panelX, panelY, panelW, 3 * scale, accent.r, accent.g, accent.b, 255)
+    local cy = panelY + pad + 2 * scale
 
-    local cx = panelX + padding
-    local cy = panelY + 6 * scale
-    local labelW = 70 * scale
-    local valX = cx + labelW
-    local contentW = panelW - padding * 2
+    -- =====================
+    --  HEADER: Name + ID
+    -- =====================
+    Menu.DrawText(cx, cy, info.name, headerFontSize, accent.r / 255, accent.g / 255, accent.b / 255, 1.0)
 
-    -- === Header: Name + ID ===
-    local acR, acG, acB = accent.r / 255, accent.g / 255, accent.b / 255
-    Menu.DrawText(cx, cy, info.name, fontSize + 2, acR, acG, acB, 1.0)
-
-    local idText = "[ID: " .. tostring(info.serverId) .. "]"
-    -- Draw ID right-aligned
+    local idText = "ID: " .. tostring(info.serverId)
     if Susano and Susano.GetTextWidth then
-        local tw = Susano.GetTextWidth(idText, (fontSize) * scale)
-        Menu.DrawText(panelX + panelW - padding - tw, cy, idText, fontSize, 0.5, 0.5, 0.5, 1.0)
+        local tw = Susano.GetTextWidth(idText, fontSize * scale)
+        Menu.DrawText(panelX + panelW - pad - tw, cy + 2 * scale, idText, fontSize, 0.45, 0.45, 0.45, 1.0)
     else
-        Menu.DrawText(panelX + panelW - padding - 60 * scale, cy, idText, fontSize, 0.5, 0.5, 0.5, 1.0)
+        Menu.DrawText(panelX + panelW - pad - 55 * scale, cy + 2 * scale, idText, fontSize, 0.45, 0.45, 0.45, 1.0)
     end
-    cy = cy + headerH - 6 * scale
+    cy = cy + 28 * scale
 
-    -- === Health Bar ===
-    Menu.DrawText(cx, cy, "Health", fontSize, 0.6, 0.6, 0.6, 1.0)
-    cy = cy + lineH * 0.7
+    -- Helper: draw a label:value row
+    local function Row(label, value, vR, vG, vB)
+        vR = vR or 1.0; vG = vG or 1.0; vB = vB or 1.0
+        Menu.DrawText(cx, cy, label, fontSize, 0.50, 0.50, 0.50, 1.0)
+        Menu.DrawText(valX, cy, tostring(value), fontSize, vR, vG, vB, 1.0)
+        cy = cy + rowH
+    end
 
-    -- Bar background
-    Menu.DrawRect(cx, cy, contentW, barH, 40, 40, 40, 255)
-    -- Bar fill
+    -- =====================
+    --  HEALTH & ARMOR
+    -- =====================
+    cy = DrawSectionSep(cx, cy, contentW, "HEALTH & ARMOR", scale, accent)
+
+    -- Health
+    Menu.DrawText(cx, cy, "Health", fontSize, 0.55, 0.55, 0.55, 1.0)
+    local healthPctText = ""
     local healthPct = 0
     if info.maxHealth > 0 then
-        healthPct = math.max(0, math.min(1, (info.health) / info.maxHealth))
+        healthPct = math.max(0, math.min(1, info.health / info.maxHealth))
+        healthPctText = tostring(math.floor(healthPct * 100)) .. "%"
     end
-    if healthPct > 0 then
-        local hR, hG, hB = 76, 175, 80 -- green
-        if healthPct < 0.3 then hR, hG, hB = 211, 64, 60 -- red
-        elseif healthPct < 0.6 then hR, hG, hB = 230, 160, 40 end -- orange
-        Menu.DrawRect(cx, cy, math.floor(contentW * healthPct), barH, hR, hG, hB, 255)
+    -- Percentage right-aligned on label row
+    if Susano and Susano.GetTextWidth then
+        local tw = Susano.GetTextWidth(healthPctText, fontSize * scale)
+        Menu.DrawText(panelX + panelW - pad - tw, cy, healthPctText, fontSize, 0.7, 0.7, 0.7, 1.0)
+    else
+        Menu.DrawText(panelX + panelW - pad - 30 * scale, cy, healthPctText, fontSize, 0.7, 0.7, 0.7, 1.0)
     end
-    -- Health text on bar
-    local healthStr = tostring(info.health) .. " / " .. tostring(info.maxHealth)
-    Menu.DrawText(cx + 4, cy - 1, healthStr, fontSize - 3, 1.0, 1.0, 1.0, 0.9)
-    cy = cy + barH + lineH * 0.5
+    cy = cy + rowH * 0.7
 
-    -- === Armor Bar ===
-    Menu.DrawText(cx, cy, "Armor", fontSize, 0.6, 0.6, 0.6, 1.0)
-    cy = cy + lineH * 0.7
+    -- Color: green > orange > red
+    local hR, hG, hB = 76, 175, 80
+    if healthPct < 0.25 then hR, hG, hB = 211, 64, 60
+    elseif healthPct < 0.55 then hR, hG, hB = 230, 160, 40 end
 
-    Menu.DrawRect(cx, cy, contentW, barH, 40, 40, 40, 255)
+    DrawInfoBar(cx, cy, contentW, barH, healthPct, hR, hG, hB, tostring(info.health) .. " / " .. tostring(info.maxHealth))
+    cy = cy + barH + 6 * scale
+
+    -- Armor
+    Menu.DrawText(cx, cy, "Armor", fontSize, 0.55, 0.55, 0.55, 1.0)
     local armorPct = math.max(0, math.min(1, info.armor / 100))
-    if armorPct > 0 then
-        Menu.DrawRect(cx, cy, math.floor(contentW * armorPct), barH, 60, 120, 210, 255)
+    local armorPctText = tostring(info.armor) .. "%"
+    if Susano and Susano.GetTextWidth then
+        local tw = Susano.GetTextWidth(armorPctText, fontSize * scale)
+        Menu.DrawText(panelX + panelW - pad - tw, cy, armorPctText, fontSize, 0.7, 0.7, 0.7, 1.0)
+    else
+        Menu.DrawText(panelX + panelW - pad - 30 * scale, cy, armorPctText, fontSize, 0.7, 0.7, 0.7, 1.0)
     end
-    local armorStr = tostring(info.armor) .. " / 100"
-    Menu.DrawText(cx + 4, cy - 1, armorStr, fontSize - 3, 1.0, 1.0, 1.0, 0.9)
-    cy = cy + barH + lineH * 0.7
+    cy = cy + rowH * 0.7
 
-    -- === Info Rows ===
-    local function DrawInfoRow(label, value, valR, valG, valB)
-        valR = valR or 1.0; valG = valG or 1.0; valB = valB or 1.0
-        Menu.DrawText(cx, cy, label, fontSize, 0.5, 0.5, 0.5, 1.0)
-        Menu.DrawText(valX, cy, tostring(value), fontSize, valR, valG, valB, 1.0)
-        cy = cy + lineH
+    DrawInfoBar(cx, cy, contentW, barH, armorPct, 60, 130, 220, tostring(info.armor) .. " / 100")
+    cy = cy + barH + 6 * scale
+
+    -- =====================
+    --  PLAYER INFO
+    -- =====================
+    cy = DrawSectionSep(cx, cy, contentW, "PLAYER", scale, accent)
+
+    Row("Weapon", info.weapon)
+    Row("Distance", tostring(info.distance) .. " m")
+    Row("Heading", tostring(info.heading) .. "  ")
+
+    -- Coords formatted
+    local coordsStr = string.format("%.1f, %.1f, %.1f", info.coords.x, info.coords.y, info.coords.z)
+    Row("Coords", coordsStr, 0.7, 0.7, 0.7)
+
+    -- =====================
+    --  VEHICLE (if in one)
+    -- =====================
+    if info.inVehicle then
+        cy = DrawSectionSep(cx, cy, contentW, "VEHICLE", scale, accent)
+        Row("Model", info.vehicle)
+        if info.vehPlate ~= "" then
+            Row("Plate", info.vehPlate)
+        end
+        Row("Speed", tostring(info.speed) .. " km/h")
+
+        -- Vehicle health bar
+        Menu.DrawText(cx, cy, "Veh. Health", fontSize, 0.55, 0.55, 0.55, 1.0)
+        cy = cy + rowH * 0.7
+        local vhPct = 0
+        if info.vehMaxHealth > 0 then
+            vhPct = math.max(0, math.min(1, info.vehHealth / info.vehMaxHealth))
+        end
+        local vhR, vhG, vhB = 76, 175, 80
+        if vhPct < 0.25 then vhR, vhG, vhB = 211, 64, 60
+        elseif vhPct < 0.55 then vhR, vhG, vhB = 230, 160, 40 end
+        DrawInfoBar(cx, cy, contentW, barH, vhPct, vhR, vhG, vhB, tostring(info.vehHealth) .. " / " .. tostring(info.vehMaxHealth))
+        cy = cy + barH + 6 * scale
     end
 
-    DrawInfoRow("Weapon", info.weapon)
-    DrawInfoRow("Vehicle", info.vehicle)
-    if info.speed > 0 then
-        DrawInfoRow("Speed", tostring(info.speed) .. " km/h")
-    end
-    DrawInfoRow("Distance", tostring(info.distance) .. " m")
-    local statusR, statusG, statusB = 0.3, 0.9, 0.35
-    local statusText = "Alive"
+    -- =====================
+    --  STATE & FLAGS
+    -- =====================
+    cy = DrawSectionSep(cx, cy, contentW, "STATE", scale, accent)
+
+    -- Build state string from flags
+    local states = {}
+    if info.isAiming then states[#states + 1] = "Aiming" end
+    if info.isInCover then states[#states + 1] = "Cover" end
+    if info.isSprinting then states[#states + 1] = "Sprint" end
+    if info.isSwimming then states[#states + 1] = "Swimming" end
+    if info.isFalling then states[#states + 1] = "Falling" end
+    if info.isRagdoll then states[#states + 1] = "Ragdoll" end
+    if info.isInvisible then states[#states + 1] = "Invisible" end
+    if #states == 0 then states[#states + 1] = "Idle" end
+    Row("Action", table.concat(states, ", "))
+
+    -- Status (alive/dead) + Godmode flag
     if not info.isAlive then
-        statusR, statusG, statusB = 0.9, 0.2, 0.2
-        statusText = "Dead"
+        Row("Status", "Mort", 0.9, 0.2, 0.2)
+    elseif info.isGodmode then
+        Row("Status", "En Vie  [GODMODE]", 1.0, 0.85, 0.0)
+    else
+        Row("Status", "En Vie", 0.3, 0.9, 0.35)
     end
-    DrawInfoRow("Status", statusText, statusR, statusG, statusB)
 end
 
 
