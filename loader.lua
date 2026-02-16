@@ -2260,58 +2260,52 @@ function Menu.DrawPlayerInfoPanel()
     local sp = Menu.GetScaledPosition()
     local accent = Menu.Colors.SelectedBg or { r = 104, g = 168, b = 203 }
 
-    -- Panel sizing
+    -- Compute exact menu total height (banner to footer bottom)
+    local menuTotalH
+    if Menu.OpenedCategory then
+        local category = Menu.Categories[Menu.OpenedCategory]
+        if category and category.hasTabs and category.tabs then
+            local currentTab = category.tabs[Menu.CurrentTab]
+            local visibleItems = 0
+            if currentTab and currentTab.items then
+                visibleItems = math.min(Menu.ItemsPerPage, #currentTab.items)
+            end
+            menuTotalH = sp.headerHeight + (sp.headerSpacing or 0) + sp.mainMenuHeight + sp.mainMenuSpacing + (visibleItems * sp.itemHeight) + sp.footerSpacing + sp.footerHeight
+        else
+            menuTotalH = sp.headerHeight + (sp.headerSpacing or 0) + sp.mainMenuHeight + sp.mainMenuSpacing + sp.footerSpacing + sp.footerHeight
+        end
+    else
+        local totalCats = #Menu.Categories - 1
+        local visCats = math.min(Menu.ItemsPerPage, totalCats)
+        menuTotalH = sp.headerHeight + (sp.headerSpacing or 0) + (visCats * sp.itemHeight) + sp.footerSpacing + sp.footerHeight
+    end
+
+    -- Panel position: right of menu, same Y, same height
     local gap = 12 * scale
     local panelX = sp.x + sp.width + gap
     local panelW = 310 * scale
+    local panelY = sp.y
+    local panelH = menuTotalH
+
     local pad = 14 * scale
-    local rowH = 24 * scale
+    local rowH = 22 * scale
     local barH = 14 * scale
     local fontSize = 13
     local headerFontSize = 16
 
-    -- Content X boundaries
     local cx = panelX + pad
     local contentW = panelW - pad * 2
     local labelW = 95 * scale
     local valX = cx + labelW
 
-    -- Pre-calculate total height
-    -- Header(name+id) + separator + health bar + armor bar + separator
-    -- + weapon + distance + heading + coords + separator
-    -- + vehicle section (conditional) + separator + states + status
-    local h = pad
-    h = h + 28 * scale          -- header block (name + id)
-    h = h + 18 * scale          -- separator
-    h = h + rowH + barH + 4*scale   -- health label+bar
-    h = h + rowH + barH + 4*scale   -- armor label+bar
-    h = h + 18 * scale          -- separator
-    h = h + rowH * 4            -- weapon, distance, heading, coords
-    if info.inVehicle then
-        h = h + 18 * scale      -- separator
-        h = h + rowH * 3        -- vehicle, plate, speed
-        h = h + rowH + barH + 4*scale -- veh health bar
-    end
-    h = h + 18 * scale          -- separator
-    h = h + rowH * 2            -- state + status
-    h = h + pad
+    -- === BACKGROUND (matches menu: outer border + inner fill, rounded) ===
+    DrawPanelBackground(panelX, panelY, panelW, panelH, 6)
 
-    local panelY = sp.y + sp.headerHeight + (sp.headerSpacing or 0)
-
-    -- === BACKGROUND (matches menu exactly) ===
-    DrawPanelBackground(panelX, panelY, panelW, h, 6)
-
-    -- === ACCENT LINE (top, 3px, theme color) ===
-    if Susano and Susano.DrawRectFilled then
-        Susano.DrawRectFilled(panelX + 6, panelY + 1, panelW - 12, 3 * scale, accent.r / 255, accent.g / 255, accent.b / 255, 0.9, 2)
-    else
-        Menu.DrawRect(panelX + 6, panelY + 1, panelW - 12, 3 * scale, accent.r, accent.g, accent.b, 230)
-    end
-
-    local cy = panelY + pad + 2 * scale
+    -- Start content below top padding
+    local cy = panelY + pad
 
     -- =====================
-    --  HEADER: Name + ID
+    --  HEADER: Nom + ID
     -- =====================
     Menu.DrawText(cx, cy, info.name, headerFontSize, accent.r / 255, accent.g / 255, accent.b / 255, 1.0)
 
@@ -2322,7 +2316,7 @@ function Menu.DrawPlayerInfoPanel()
     else
         Menu.DrawText(panelX + panelW - pad - 55 * scale, cy + 2 * scale, idText, fontSize, 0.45, 0.45, 0.45, 1.0)
     end
-    cy = cy + 28 * scale
+    cy = cy + 26 * scale
 
     -- Helper: draw a label:value row
     local function Row(label, value, vR, vG, vB)
@@ -2333,37 +2327,33 @@ function Menu.DrawPlayerInfoPanel()
     end
 
     -- =====================
-    --  HEALTH & ARMOR
+    --  SANTE & ARMURE
     -- =====================
-    cy = DrawSectionSep(cx, cy, contentW, "HEALTH & ARMOR", scale, accent)
+    cy = DrawSectionSep(cx, cy, contentW, "SANTE & ARMURE", scale, accent)
 
-    -- Health
-    Menu.DrawText(cx, cy, "Health", fontSize, 0.55, 0.55, 0.55, 1.0)
-    local healthPctText = ""
+    -- Sante
+    Menu.DrawText(cx, cy, "Sante", fontSize, 0.55, 0.55, 0.55, 1.0)
     local healthPct = 0
     if info.maxHealth > 0 then
         healthPct = math.max(0, math.min(1, info.health / info.maxHealth))
-        healthPctText = tostring(math.floor(healthPct * 100)) .. "%"
     end
-    -- Percentage right-aligned on label row
+    local healthPctText = tostring(math.floor(healthPct * 100)) .. "%"
     if Susano and Susano.GetTextWidth then
         local tw = Susano.GetTextWidth(healthPctText, fontSize * scale)
         Menu.DrawText(panelX + panelW - pad - tw, cy, healthPctText, fontSize, 0.7, 0.7, 0.7, 1.0)
     else
         Menu.DrawText(panelX + panelW - pad - 30 * scale, cy, healthPctText, fontSize, 0.7, 0.7, 0.7, 1.0)
     end
-    cy = cy + rowH * 0.7
+    cy = cy + rowH * 0.65
 
-    -- Color: green > orange > red
     local hR, hG, hB = 76, 175, 80
     if healthPct < 0.25 then hR, hG, hB = 211, 64, 60
     elseif healthPct < 0.55 then hR, hG, hB = 230, 160, 40 end
-
     DrawInfoBar(cx, cy, contentW, barH, healthPct, hR, hG, hB, tostring(info.health) .. " / " .. tostring(info.maxHealth))
-    cy = cy + barH + 6 * scale
+    cy = cy + barH + 5 * scale
 
-    -- Armor
-    Menu.DrawText(cx, cy, "Armor", fontSize, 0.55, 0.55, 0.55, 1.0)
+    -- Armure
+    Menu.DrawText(cx, cy, "Armure", fontSize, 0.55, 0.55, 0.55, 1.0)
     local armorPct = math.max(0, math.min(1, info.armor / 100))
     local armorPctText = tostring(info.armor) .. "%"
     if Susano and Susano.GetTextWidth then
@@ -2372,38 +2362,35 @@ function Menu.DrawPlayerInfoPanel()
     else
         Menu.DrawText(panelX + panelW - pad - 30 * scale, cy, armorPctText, fontSize, 0.7, 0.7, 0.7, 1.0)
     end
-    cy = cy + rowH * 0.7
+    cy = cy + rowH * 0.65
 
     DrawInfoBar(cx, cy, contentW, barH, armorPct, 60, 130, 220, tostring(info.armor) .. " / 100")
-    cy = cy + barH + 6 * scale
+    cy = cy + barH + 5 * scale
 
     -- =====================
-    --  PLAYER INFO
+    --  JOUEUR
     -- =====================
-    cy = DrawSectionSep(cx, cy, contentW, "PLAYER", scale, accent)
+    cy = DrawSectionSep(cx, cy, contentW, "JOUEUR", scale, accent)
 
-    Row("Weapon", info.weapon)
+    Row("Arme", info.weapon)
     Row("Distance", tostring(info.distance) .. " m")
-    Row("Heading", tostring(info.heading) .. "  ")
-
-    -- Coords formatted
+    Row("Direction", tostring(info.heading) .. "  ")
     local coordsStr = string.format("%.1f, %.1f, %.1f", info.coords.x, info.coords.y, info.coords.z)
     Row("Coords", coordsStr, 0.7, 0.7, 0.7)
 
     -- =====================
-    --  VEHICLE (if in one)
+    --  VEHICULE (conditionnel)
     -- =====================
     if info.inVehicle then
-        cy = DrawSectionSep(cx, cy, contentW, "VEHICLE", scale, accent)
-        Row("Model", info.vehicle)
+        cy = DrawSectionSep(cx, cy, contentW, "VEHICULE", scale, accent)
+        Row("Modele", info.vehicle)
         if info.vehPlate ~= "" then
-            Row("Plate", info.vehPlate)
+            Row("Plaque", info.vehPlate)
         end
-        Row("Speed", tostring(info.speed) .. " km/h")
+        Row("Vitesse", tostring(info.speed) .. " km/h")
 
-        -- Vehicle health bar
-        Menu.DrawText(cx, cy, "Veh. Health", fontSize, 0.55, 0.55, 0.55, 1.0)
-        cy = cy + rowH * 0.7
+        Menu.DrawText(cx, cy, "Vie Vehicule", fontSize, 0.55, 0.55, 0.55, 1.0)
+        cy = cy + rowH * 0.65
         local vhPct = 0
         if info.vehMaxHealth > 0 then
             vhPct = math.max(0, math.min(1, info.vehHealth / info.vehMaxHealth))
@@ -2412,35 +2399,37 @@ function Menu.DrawPlayerInfoPanel()
         if vhPct < 0.25 then vhR, vhG, vhB = 211, 64, 60
         elseif vhPct < 0.55 then vhR, vhG, vhB = 230, 160, 40 end
         DrawInfoBar(cx, cy, contentW, barH, vhPct, vhR, vhG, vhB, tostring(info.vehHealth) .. " / " .. tostring(info.vehMaxHealth))
-        cy = cy + barH + 6 * scale
+        cy = cy + barH + 5 * scale
     end
 
     -- =====================
-    --  STATE & FLAGS
+    --  ETAT (only if active flags)
     -- =====================
-    cy = DrawSectionSep(cx, cy, contentW, "STATE", scale, accent)
-
-    -- Build state string from flags
     local states = {}
-    if info.isAiming then states[#states + 1] = "Aiming" end
-    if info.isInCover then states[#states + 1] = "Cover" end
+    if info.isAiming then states[#states + 1] = "Vise" end
+    if info.isInCover then states[#states + 1] = "Couvert" end
     if info.isSprinting then states[#states + 1] = "Sprint" end
-    if info.isSwimming then states[#states + 1] = "Swimming" end
-    if info.isFalling then states[#states + 1] = "Falling" end
+    if info.isSwimming then states[#states + 1] = "Nage" end
+    if info.isFalling then states[#states + 1] = "Chute" end
     if info.isRagdoll then states[#states + 1] = "Ragdoll" end
     if info.isInvisible then states[#states + 1] = "Invisible" end
-    if #states == 0 then states[#states + 1] = "Idle" end
-    Row("Action", table.concat(states, ", "))
 
-    -- Status (alive/dead) + Godmode flag
+    if #states > 0 then
+        cy = DrawSectionSep(cx, cy, contentW, "ETAT", scale, accent)
+        Row("Action", table.concat(states, ", "))
+    end
+
+    -- Statut
+    cy = DrawSectionSep(cx, cy, contentW, "STATUT", scale, accent)
     if not info.isAlive then
-        Row("Status", "Mort", 0.9, 0.2, 0.2)
+        Row("Statut", "Mort", 0.9, 0.2, 0.2)
     elseif info.isGodmode then
-        Row("Status", "En Vie  [GODMODE]", 1.0, 0.85, 0.0)
+        Row("Statut", "En Vie  [GODMODE]", 1.0, 0.85, 0.0)
     else
-        Row("Status", "En Vie", 0.3, 0.9, 0.35)
+        Row("Statut", "En Vie", 0.3, 0.9, 0.35)
     end
 end
+
 
 
 
