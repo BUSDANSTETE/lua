@@ -2038,6 +2038,273 @@ end)
 Menu.OnRender = function()
     if not worldSettings then worldSettings = GetWorldSettings() end
     RenderWorldVisuals(worldSettings)
+    -- Draw player info panel when a player is selected
+    if Menu.Visible and Menu.SelectedPlayer then
+        Menu.DrawPlayerInfoPanel()
+    end
+end
+
+-- ============================================
+-- PLAYER INFO PANEL (adapted from Nebula)
+-- ============================================
+
+local function getWeaponName(weaponHash)
+    local weaponNames = {
+        [GetHashKey("WEAPON_RAILGUN")] = "Railgun",
+        [GetHashKey("WEAPON_ASSAULTSHOTGUN")] = "Assault Shotgun",
+        [GetHashKey("WEAPON_SMG")] = "SMG",
+        [GetHashKey("WEAPON_FIREWORK")] = "Firework Launcher",
+        [GetHashKey("WEAPON_MOLOTOV")] = "Molotov",
+        [GetHashKey("WEAPON_APPISTOL")] = "AP Pistol",
+        [GetHashKey("WEAPON_STUNGUN")] = "Stun Gun",
+        [GetHashKey("WEAPON_ASSAULTRIFLE")] = "Assault Rifle",
+        [GetHashKey("WEAPON_ASSAULTRIFLE_MK2")] = "Assault Rifle MK2",
+        [GetHashKey("WEAPON_ASSAULTSMG")] = "Assault SMG",
+        [GetHashKey("WEAPON_AUTOSHOTGUN")] = "Auto Shotgun",
+        [GetHashKey("WEAPON_BULLPUPRIFLE")] = "Bullpup Rifle",
+        [GetHashKey("WEAPON_BULLPUPRIFLE_MK2")] = "Bullpup Rifle MK2",
+        [GetHashKey("WEAPON_BULLPUPSHOTGUN")] = "Bullpup Shotgun",
+        [GetHashKey("WEAPON_CARBINERIFLE")] = "Carbine Rifle",
+        [GetHashKey("WEAPON_CARBINERIFLE_MK2")] = "Carbine Rifle MK2",
+        [GetHashKey("WEAPON_COMBATMG")] = "Combat MG",
+        [GetHashKey("WEAPON_COMBATMG_MK2")] = "Combat MG MK2",
+        [GetHashKey("WEAPON_COMBATPDW")] = "Combat PDW",
+        [GetHashKey("WEAPON_COMBATPISTOL")] = "Combat Pistol",
+        [GetHashKey("WEAPON_COMPACTLAUNCHER")] = "Compact Launcher",
+        [GetHashKey("WEAPON_COMPACTRIFLE")] = "Compact Rifle",
+        [GetHashKey("WEAPON_DBSHOTGUN")] = "DB Shotgun",
+        [GetHashKey("WEAPON_DOUBLEACTION")] = "Double Action",
+        [GetHashKey("WEAPON_GRENADE")] = "Grenade",
+        [GetHashKey("WEAPON_GUSENBERG")] = "Gusenberg",
+        [GetHashKey("WEAPON_HEAVYPISTOL")] = "Heavy Pistol",
+        [GetHashKey("WEAPON_HEAVYSHOTGUN")] = "Heavy Shotgun",
+        [GetHashKey("WEAPON_HEAVYSNIPER")] = "Heavy Sniper",
+        [GetHashKey("WEAPON_HEAVYSNIPER_MK2")] = "Heavy Sniper MK2",
+        [GetHashKey("WEAPON_HOMINGLAUNCHER")] = "Homing Launcher",
+        [GetHashKey("WEAPON_MACHINEPISTOL")] = "Machine Pistol",
+        [GetHashKey("WEAPON_MARKSMANPISTOL")] = "Marksman Pistol",
+        [GetHashKey("WEAPON_MARKSMANRIFLE")] = "Marksman Rifle",
+        [GetHashKey("WEAPON_MARKSMANRIFLE_MK2")] = "Marksman Rifle MK2",
+        [GetHashKey("WEAPON_MG")] = "MG",
+        [GetHashKey("WEAPON_MICROSMG")] = "Micro SMG",
+        [GetHashKey("WEAPON_MINIGUN")] = "Minigun",
+        [GetHashKey("WEAPON_MINISMG")] = "Mini SMG",
+        [GetHashKey("WEAPON_MUSKET")] = "Musket",
+        [GetHashKey("WEAPON_NAVYREVOLVER")] = "Navy Revolver",
+        [GetHashKey("WEAPON_PISTOL")] = "Pistol",
+        [GetHashKey("WEAPON_PISTOL50")] = "Pistol .50",
+        [GetHashKey("WEAPON_PISTOL_MK2")] = "Pistol MK2",
+        [GetHashKey("WEAPON_PUMPSHOTGUN")] = "Pump Shotgun",
+        [GetHashKey("WEAPON_PUMPSHOTGUN_MK2")] = "Pump Shotgun MK2",
+        [GetHashKey("WEAPON_RAYCARBINE")] = "Ray Carbine",
+        [GetHashKey("WEAPON_RAYMINIGUN")] = "Ray Minigun",
+        [GetHashKey("WEAPON_RAYPISTOL")] = "Ray Pistol",
+        [GetHashKey("WEAPON_REVOLVER")] = "Revolver",
+        [GetHashKey("WEAPON_REVOLVER_MK2")] = "Revolver MK2",
+        [GetHashKey("WEAPON_SAWNOFFSHOTGUN")] = "Sawed-Off",
+        [GetHashKey("WEAPON_RPG")] = "RPG",
+        [GetHashKey("WEAPON_SMG_MK2")] = "SMG MK2",
+        [GetHashKey("WEAPON_SNIPERRIFLE")] = "Sniper Rifle",
+        [GetHashKey("WEAPON_SNSPISTOL")] = "SNS Pistol",
+        [GetHashKey("WEAPON_SNSPISTOL_MK2")] = "SNS Pistol MK2",
+        [GetHashKey("WEAPON_SPECIALCARBINE")] = "Special Carbine",
+        [GetHashKey("WEAPON_SPECIALCARBINE_MK2")] = "Special Carbine MK2",
+        [GetHashKey("WEAPON_STICKYBOMB")] = "Sticky Bomb",
+        [GetHashKey("WEAPON_VINTAGEPISTOL")] = "Vintage Pistol",
+        [GetHashKey("WEAPON_SWITCHBLADE")] = "Switchblade",
+        [GetHashKey("WEAPON_NIGHTSTICK")] = "Nightstick",
+        [GetHashKey("WEAPON_KNIFE")] = "Knife",
+        [GetHashKey("WEAPON_BAT")] = "Bat",
+        [GetHashKey("WEAPON_HAMMER")] = "Hammer",
+        [GetHashKey("WEAPON_CROWBAR")] = "Crowbar",
+        [GetHashKey("WEAPON_WRENCH")] = "Wrench",
+        [GetHashKey("WEAPON_BATTLEAXE")] = "Battle Axe",
+        [GetHashKey("WEAPON_DAGGER")] = "Dagger",
+        [GetHashKey("WEAPON_HATCHET")] = "Hatchet",
+        [GetHashKey("WEAPON_MACHETE")] = "Machete",
+        [GetHashKey("WEAPON_FLASHLIGHT")] = "Flashlight",
+        [GetHashKey("WEAPON_UNARMED")] = "Unarmed"
+    }
+    return weaponNames[weaponHash] or "Unknown"
+end
+
+-- Resolve selected player server ID to local ID
+local function ResolveLocalId(serverId)
+    for _, p in ipairs(GetActivePlayers()) do
+        if GetPlayerServerId(p) == serverId then
+            return p
+        end
+    end
+    return nil
+end
+
+-- Collect real-time info for the selected player
+function Menu.GetSelectedPlayerInfo()
+    local serverId = Menu.SelectedPlayer
+    if not serverId then return nil end
+
+    local localId = ResolveLocalId(serverId)
+    if not localId then return nil end
+
+    local playerPed = GetPlayerPed(localId)
+    if not playerPed or playerPed == 0 or not DoesEntityExist(playerPed) then return nil end
+
+    -- Weapon
+    local weaponHash = GetSelectedPedWeapon(playerPed)
+    local weaponName = "Unarmed"
+    if weaponHash ~= GetHashKey("WEAPON_UNARMED") then
+        weaponName = getWeaponName(weaponHash)
+    end
+
+    -- Vehicle
+    local vehicle = GetVehiclePedIsIn(playerPed, false)
+    local vehicleName = "On Foot"
+    local speed = 0
+    if vehicle ~= 0 then
+        vehicleName = GetDisplayNameFromVehicleModel(GetEntityModel(vehicle))
+        speed = math.floor(GetEntitySpeed(vehicle) * 3.6) -- km/h
+    end
+
+    -- Distance
+    local myCoords = GetEntityCoords(PlayerPedId())
+    local targetCoords = GetEntityCoords(playerPed)
+    local distance = math.floor(#(myCoords - targetCoords))
+
+    -- Health / Armor
+    local health = GetEntityHealth(playerPed)
+    local maxHealth = GetEntityMaxHealth(playerPed)
+    local armor = GetPedArmour(playerPed)
+
+    -- Alive
+    local isAlive = health > 0
+
+    return {
+        name = GetPlayerName(localId) or "Unknown",
+        serverId = serverId,
+        health = health,
+        maxHealth = maxHealth,
+        armor = armor,
+        weapon = weaponName,
+        vehicle = vehicleName,
+        speed = speed,
+        distance = distance,
+        isAlive = isAlive
+    }
+end
+
+-- Draw the info panel to the right of the menu
+function Menu.DrawPlayerInfoPanel()
+    local info = Menu.GetSelectedPlayerInfo()
+    if not info then return end
+
+    local scale = Menu.Scale or 1.0
+    local sp = Menu.GetScaledPosition()
+
+    -- Panel position: right of menu with 10px gap
+    local panelX = sp.x + sp.width + 10
+    local panelW = 260 * scale
+    local lineH = 22 * scale
+    local padding = 10 * scale
+    local barH = 8 * scale
+    local fontSize = 14
+
+    -- Total rows: Header + Health bar + Armor bar + Weapon + Vehicle + Speed + Distance + Status = 8 visual blocks
+    -- Calculate total height
+    local headerH = 32 * scale
+    local rowCount = 6 -- weapon, vehicle, speed, distance, status, separator
+    local barsH = (barH + lineH) * 2 -- health bar + armor bar (label + bar each)
+    local panelH = headerH + barsH + (rowCount * lineH) + padding * 2
+
+    local panelY = sp.y + sp.headerHeight + (sp.headerSpacing or 0)
+
+    -- Background
+    local bgR, bgG, bgB, bgA = 15 / 255, 15 / 255, 15 / 255, 0.92
+    if Susano and Susano.DrawRectFilled then
+        Susano.DrawRectFilled(panelX, panelY, panelW, panelH, bgR, bgG, bgB, bgA, 6)
+    else
+        Menu.DrawRect(panelX, panelY, panelW, panelH, 15, 15, 15, 235)
+    end
+
+    -- Border accent line (top, uses theme color)
+    local accent = Menu.Colors.SelectedBg or { r = 104, g = 168, b = 203 }
+    Menu.DrawRect(panelX, panelY, panelW, 3 * scale, accent.r, accent.g, accent.b, 255)
+
+    local cx = panelX + padding
+    local cy = panelY + 6 * scale
+    local labelW = 70 * scale
+    local valX = cx + labelW
+    local contentW = panelW - padding * 2
+
+    -- === Header: Name + ID ===
+    local acR, acG, acB = accent.r / 255, accent.g / 255, accent.b / 255
+    Menu.DrawText(cx, cy, info.name, fontSize + 2, acR, acG, acB, 1.0)
+
+    local idText = "[ID: " .. tostring(info.serverId) .. "]"
+    -- Draw ID right-aligned
+    if Susano and Susano.GetTextWidth then
+        local tw = Susano.GetTextWidth(idText, (fontSize) * scale)
+        Menu.DrawText(panelX + panelW - padding - tw, cy, idText, fontSize, 0.5, 0.5, 0.5, 1.0)
+    else
+        Menu.DrawText(panelX + panelW - padding - 60 * scale, cy, idText, fontSize, 0.5, 0.5, 0.5, 1.0)
+    end
+    cy = cy + headerH - 6 * scale
+
+    -- === Health Bar ===
+    Menu.DrawText(cx, cy, "Health", fontSize, 0.6, 0.6, 0.6, 1.0)
+    cy = cy + lineH * 0.7
+
+    -- Bar background
+    Menu.DrawRect(cx, cy, contentW, barH, 40, 40, 40, 255)
+    -- Bar fill
+    local healthPct = 0
+    if info.maxHealth > 0 then
+        healthPct = math.max(0, math.min(1, (info.health) / info.maxHealth))
+    end
+    if healthPct > 0 then
+        local hR, hG, hB = 76, 175, 80 -- green
+        if healthPct < 0.3 then hR, hG, hB = 211, 64, 60 -- red
+        elseif healthPct < 0.6 then hR, hG, hB = 230, 160, 40 end -- orange
+        Menu.DrawRect(cx, cy, math.floor(contentW * healthPct), barH, hR, hG, hB, 255)
+    end
+    -- Health text on bar
+    local healthStr = tostring(info.health) .. " / " .. tostring(info.maxHealth)
+    Menu.DrawText(cx + 4, cy - 1, healthStr, fontSize - 3, 1.0, 1.0, 1.0, 0.9)
+    cy = cy + barH + lineH * 0.5
+
+    -- === Armor Bar ===
+    Menu.DrawText(cx, cy, "Armor", fontSize, 0.6, 0.6, 0.6, 1.0)
+    cy = cy + lineH * 0.7
+
+    Menu.DrawRect(cx, cy, contentW, barH, 40, 40, 40, 255)
+    local armorPct = math.max(0, math.min(1, info.armor / 100))
+    if armorPct > 0 then
+        Menu.DrawRect(cx, cy, math.floor(contentW * armorPct), barH, 60, 120, 210, 255)
+    end
+    local armorStr = tostring(info.armor) .. " / 100"
+    Menu.DrawText(cx + 4, cy - 1, armorStr, fontSize - 3, 1.0, 1.0, 1.0, 0.9)
+    cy = cy + barH + lineH * 0.7
+
+    -- === Info Rows ===
+    local function DrawInfoRow(label, value, valR, valG, valB)
+        valR = valR or 1.0; valG = valG or 1.0; valB = valB or 1.0
+        Menu.DrawText(cx, cy, label, fontSize, 0.5, 0.5, 0.5, 1.0)
+        Menu.DrawText(valX, cy, tostring(value), fontSize, valR, valG, valB, 1.0)
+        cy = cy + lineH
+    end
+
+    DrawInfoRow("Weapon", info.weapon)
+    DrawInfoRow("Vehicle", info.vehicle)
+    if info.speed > 0 then
+        DrawInfoRow("Speed", tostring(info.speed) .. " km/h")
+    end
+    DrawInfoRow("Distance", tostring(info.distance) .. " m")
+    local statusR, statusG, statusB = 0.3, 0.9, 0.35
+    local statusText = "Alive"
+    if not info.isAlive then
+        statusR, statusG, statusB = 0.9, 0.2, 0.2
+        statusText = "Dead"
+    end
+    DrawInfoRow("Status", statusText, statusR, statusG, statusB)
 end
 
 
