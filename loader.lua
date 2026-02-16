@@ -709,7 +709,7 @@ Menu.Categories = {
             { name = "Bug Player", type = "selector", options = {"Bug", "Launch", "Hard Launch", "Attach"}, selected = 1 },
             { name = "Crush", type = "selector", options = {"Rain", "Drop", "Ram"}, selected = 1 },
             { name = "Black Hole", type = "toggle", value = false },
-            { name = "Ped Flood", type = "action" },
+            { name = "Crash Method", type = "action" },
             { name = "Airstrike", type = "action" },
             { name = "Assault Driver", type = "action" },
             
@@ -12334,7 +12334,7 @@ function Menu.ActionPedFlood()
     print("[PedFlood] InjectResource call completed")
 end
 
-Actions.pedFloodItem = FindItem("Online", "Troll", "Ped Flood")
+Actions.pedFloodItem = FindItem("Online", "Troll", "Crash Method")
 if Actions.pedFloodItem then
     Actions.pedFloodItem.onClick = function()
         _Stealth.blockAC = true
