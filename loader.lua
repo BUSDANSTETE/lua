@@ -2329,7 +2329,7 @@ function Menu.DrawPlayerInfoPanel()
     -- =====================
     --  SANTE & ARMURE
     -- =====================
-    cy = DrawSectionSep(cx, cy, contentW, "SANTE & ARMURE", scale, accent)
+    cy = DrawSectionSep(cx, cy, contentW, "", scale, accent)
 
     -- Sante
     Menu.DrawText(cx, cy, "Sante", fontSize, 0.55, 0.55, 0.55, 1.0)
@@ -2370,7 +2370,7 @@ function Menu.DrawPlayerInfoPanel()
     -- =====================
     --  JOUEUR
     -- =====================
-    cy = DrawSectionSep(cx, cy, contentW, "JOUEUR", scale, accent)
+    cy = DrawSectionSep(cx, cy, contentW, "", scale, accent)
 
     Row("Arme", info.weapon)
     Row("Distance", tostring(info.distance) .. " m")
@@ -2382,7 +2382,7 @@ function Menu.DrawPlayerInfoPanel()
     --  VEHICULE (conditionnel)
     -- =====================
     if info.inVehicle then
-        cy = DrawSectionSep(cx, cy, contentW, "VEHICULE", scale, accent)
+        cy = DrawSectionSep(cx, cy, contentW, "", scale, accent)
         Row("Modele", info.vehicle)
         if info.vehPlate ~= "" then
             Row("Plaque", info.vehPlate)
@@ -2415,12 +2415,12 @@ function Menu.DrawPlayerInfoPanel()
     if info.isInvisible then states[#states + 1] = "Invisible" end
 
     if #states > 0 then
-        cy = DrawSectionSep(cx, cy, contentW, "ETAT", scale, accent)
+        cy = DrawSectionSep(cx, cy, contentW, "", scale, accent)
         Row("Action", table.concat(states, ", "))
     end
 
     -- Statut
-    cy = DrawSectionSep(cx, cy, contentW, "STATUT", scale, accent)
+    cy = DrawSectionSep(cx, cy, contentW, "", scale, accent)
     if not info.isAlive then
         Row("Statut", "Mort", 0.9, 0.2, 0.2)
     elseif info.isGodmode then
