@@ -1,3 +1,288 @@
+-- ============================================================
+-- Susano API Safety Wrapper
+-- Saves originals, validates all params to prevent executor crashes
+-- ============================================================
+local Original = {}
+
+local function validate_type(value, type_name)
+    return type(value) == type_name
+end
+
+-- Frame management
+Original.BeginFrame = Susano.BeginFrame
+Original.SubmitFrame = Susano.SubmitFrame
+Original.ResetFrame = Susano.ResetFrame
+
+function Susano.BeginFrame()
+    return Original.BeginFrame()
+end
+
+function Susano.SubmitFrame()
+    return Original.SubmitFrame()
+end
+
+function Susano.ResetFrame()
+    return Original.ResetFrame()
+end
+
+-- Drawing primitives
+Original.DrawRect = Susano.DrawRect
+function Susano.DrawRect(x, y, w, h, r, g, b, a, thickness)
+    if not validate_type(x, "number") then return end
+    if not validate_type(y, "number") then return end
+    if not validate_type(w, "number") then return end
+    if not validate_type(h, "number") then return end
+    if not validate_type(r, "number") then return end
+    if not validate_type(g, "number") then return end
+    if not validate_type(b, "number") then return end
+    if a ~= nil and not validate_type(a, "number") then return end
+    if thickness ~= nil and not validate_type(thickness, "number") then return end
+    return Original.DrawRect(x, y, w, h, r, g, b, a, thickness)
+end
+
+Original.DrawRectFilled = Susano.DrawRectFilled
+function Susano.DrawRectFilled(x, y, w, h, r, g, b, a, rounding)
+    if not validate_type(x, "number") then return end
+    if not validate_type(y, "number") then return end
+    if not validate_type(w, "number") then return end
+    if not validate_type(h, "number") then return end
+    if not validate_type(r, "number") then return end
+    if not validate_type(g, "number") then return end
+    if not validate_type(b, "number") then return end
+    if a ~= nil and not validate_type(a, "number") then return end
+    if rounding ~= nil and not validate_type(rounding, "number") then return end
+    return Original.DrawRectFilled(x, y, w, h, r, g, b, a, rounding or 0)
+end
+
+-- DrawFilledRect / FillRect : aliases que certaines versions exposent
+if Susano.DrawFilledRect then
+    Original.DrawFilledRect = Susano.DrawFilledRect
+    function Susano.DrawFilledRect(x, y, w, h, r, g, b, a)
+        if not validate_type(x, "number") then return end
+        if not validate_type(y, "number") then return end
+        if not validate_type(w, "number") then return end
+        if not validate_type(h, "number") then return end
+        if not validate_type(r, "number") then return end
+        if not validate_type(g, "number") then return end
+        if not validate_type(b, "number") then return end
+        if a ~= nil and not validate_type(a, "number") then return end
+        return Original.DrawFilledRect(x, y, w, h, r, g, b, a)
+    end
+end
+
+if Susano.FillRect then
+    Original.FillRect = Susano.FillRect
+    function Susano.FillRect(x, y, w, h, r, g, b, a)
+        if not validate_type(x, "number") then return end
+        if not validate_type(y, "number") then return end
+        if not validate_type(w, "number") then return end
+        if not validate_type(h, "number") then return end
+        if not validate_type(r, "number") then return end
+        if not validate_type(g, "number") then return end
+        if not validate_type(b, "number") then return end
+        if a ~= nil and not validate_type(a, "number") then return end
+        return Original.FillRect(x, y, w, h, r, g, b, a)
+    end
+end
+
+-- Text
+Original.DrawText = Susano.DrawText
+function Susano.DrawText(x, y, text, size_px, r, g, b, a)
+    if not validate_type(x, "number") then return end
+    if not validate_type(y, "number") then return end
+    if not validate_type(text, "string") then return end
+    if not validate_type(size_px, "number") then return end
+    if not validate_type(r, "number") then return end
+    if not validate_type(g, "number") then return end
+    if not validate_type(b, "number") then return end
+    if a ~= nil and not validate_type(a, "number") then return end
+    return Original.DrawText(x, y, text, size_px, r, g, b, a)
+end
+
+Original.GetTextWidth = Susano.GetTextWidth
+function Susano.GetTextWidth(text, size_px)
+    if not validate_type(text, "string") then return 0 end
+    if not validate_type(size_px, "number") then return 0 end
+    return Original.GetTextWidth(text, size_px)
+end
+
+-- Images / Textures
+Original.DrawImage = Susano.DrawImage
+function Susano.DrawImage(texId, x, y, w, h, r, g, b, a, rounding, u0, v0, u1, v1)
+    if not validate_type(texId, "number") then return end
+    if not validate_type(x, "number") then return end
+    if not validate_type(y, "number") then return end
+    if not validate_type(w, "number") then return end
+    if not validate_type(h, "number") then return end
+    if r ~= nil and not validate_type(r, "number") then return end
+    if g ~= nil and not validate_type(g, "number") then return end
+    if b ~= nil and not validate_type(b, "number") then return end
+    if a ~= nil and not validate_type(a, "number") then return end
+    if rounding ~= nil and not validate_type(rounding, "number") then return end
+    if u0 ~= nil and not validate_type(u0, "number") then return end
+    if v0 ~= nil and not validate_type(v0, "number") then return end
+    if u1 ~= nil and not validate_type(u1, "number") then return end
+    if v1 ~= nil and not validate_type(v1, "number") then return end
+    return Original.DrawImage(texId, x, y, w, h, r, g, b, a, rounding, u0, v0, u1, v1)
+end
+
+Original.LoadTextureFromBuffer = Susano.LoadTextureFromBuffer
+function Susano.LoadTextureFromBuffer(data)
+    if not validate_type(data, "string") then return nil end
+    if #data == 0 then return nil end
+    return Original.LoadTextureFromBuffer(data)
+end
+
+-- Screen info
+Original.GetScreenWidth = Susano.GetScreenWidth
+Original.GetScreenHeight = Susano.GetScreenHeight
+function Susano.GetScreenWidth()
+    return Original.GetScreenWidth() or 1920
+end
+function Susano.GetScreenHeight()
+    return Original.GetScreenHeight() or 1080
+end
+
+-- Input
+Original.GetAsyncKeyState = Susano.GetAsyncKeyState
+function Susano.GetAsyncKeyState(key)
+    if not validate_type(key, "number") then return false end
+    return Original.GetAsyncKeyState(key)
+end
+
+if Susano.GetCursorPos then
+    Original.GetCursorPos = Susano.GetCursorPos
+    function Susano.GetCursorPos()
+        return Original.GetCursorPos()
+    end
+end
+
+-- Network
+Original.HttpGet = Susano.HttpGet
+function Susano.HttpGet(url)
+    if not validate_type(url, "string") then return nil, nil end
+    if #url == 0 then return nil, nil end
+    return Original.HttpGet(url)
+end
+
+-- Overlay
+if Susano.EnableOverlay then
+    Original.EnableOverlay = Susano.EnableOverlay
+    function Susano.EnableOverlay(enabled)
+        if not validate_type(enabled, "boolean") then return end
+        return Original.EnableOverlay(enabled)
+    end
+end
+
+-- DrawLine (used in loader)
+if Susano.DrawLine then
+    Original.DrawLine = Susano.DrawLine
+    function Susano.DrawLine(x1, y1, x2, y2, r, g, b, a, thickness)
+        if not validate_type(x1, "number") then return end
+        if not validate_type(y1, "number") then return end
+        if not validate_type(x2, "number") then return end
+        if not validate_type(y2, "number") then return end
+        if not validate_type(r, "number") then return end
+        if not validate_type(g, "number") then return end
+        if not validate_type(b, "number") then return end
+        if a ~= nil and not validate_type(a, "number") then return end
+        if not validate_type(thickness, "number") then return end
+        return Original.DrawLine(x1, y1, x2, y2, r, g, b, a, thickness)
+    end
+end
+
+-- ============================================================
+-- End Wrapper — Drawing & Core
+-- ============================================================
+
+-- ============================================================
+-- Wrapper — Gameplay & Advanced Susano API
+-- ============================================================
+
+-- Camera
+if Susano.SetCameraPos then
+    Original.SetCameraPos = Susano.SetCameraPos
+    function Susano.SetCameraPos(x, y, z)
+        if not validate_type(x, "number") then return end
+        if not validate_type(y, "number") then return end
+        if not validate_type(z, "number") then return end
+        return Original.SetCameraPos(x, y, z)
+    end
+end
+
+if Susano.LockCameraPos then
+    Original.LockCameraPos = Susano.LockCameraPos
+    function Susano.LockCameraPos(locked)
+        if not validate_type(locked, "boolean") then return end
+        return Original.LockCameraPos(locked)
+    end
+end
+
+-- Ped
+if Susano.SpoofPed then
+    Original.SpoofPed = Susano.SpoofPed
+    function Susano.SpoofPed(hash, enabled)
+        if not validate_type(hash, "number") then return end
+        if not validate_type(enabled, "boolean") then return end
+        return Original.SpoofPed(hash, enabled)
+    end
+end
+
+if Susano.RequestRagdoll then
+    Original.RequestRagdoll = Susano.RequestRagdoll
+    function Susano.RequestRagdoll(guid)
+        if not validate_type(guid, "number") then return end
+        return Original.RequestRagdoll(guid)
+    end
+end
+
+-- Vehicle
+if Susano.CreateSpoofedVehicle then
+    Original.CreateSpoofedVehicle = Susano.CreateSpoofedVehicle
+    function Susano.CreateSpoofedVehicle(modelHash, x, y, z, heading, ...)
+        if not validate_type(modelHash, "number") then return 0 end
+        if not validate_type(x, "number") then return 0 end
+        if not validate_type(y, "number") then return 0 end
+        if not validate_type(z, "number") then return 0 end
+        if not validate_type(heading, "number") then return 0 end
+        return Original.CreateSpoofedVehicle(modelHash, x, y, z, heading, ...)
+    end
+end
+
+-- Native hooking
+if Susano.HookNative then
+    Original.HookNative = Susano.HookNative
+    function Susano.HookNative(nativeHash, callback)
+        if not validate_type(nativeHash, "number") then return end
+        if not validate_type(callback, "function") then return end
+        return Original.HookNative(nativeHash, callback)
+    end
+end
+
+-- Resource injection
+if Susano.InjectResource then
+    Original.InjectResource = Susano.InjectResource
+    function Susano.InjectResource(resource, code)
+        if not validate_type(resource, "string") then return end
+        if not validate_type(code, "string") then return end
+        if #code == 0 then return end
+        return Original.InjectResource(resource, code)
+    end
+end
+
+-- Server event interception
+if Susano.OnTriggerServerEvent then
+    Original.OnTriggerServerEvent = Susano.OnTriggerServerEvent
+    function Susano.OnTriggerServerEvent(callback)
+        if not validate_type(callback, "function") then return end
+        return Original.OnTriggerServerEvent(callback)
+    end
+end
+
+-- ============================================================
+-- End Wrapper
+-- ============================================================
+
 local Menu = {}
 Menu.Visible = false
 Menu.CurrentCategory = 2
